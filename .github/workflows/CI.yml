@@ -37,7 +37,7 @@ jobs:
           node-version: 22
           cache: 'pnpm'
 
-      - uses: dtolnay/rust-toolchain@stable
+      - uses: dtolnay/rust-toolchain@1.87.0
         with:
           components: clippy, rustfmt
 
