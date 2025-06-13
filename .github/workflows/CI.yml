@@ -98,14 +98,7 @@ jobs:
         with:
           toolchain: stable
           targets: ${{ matrix.settings.target }}
-        # if: matrix.settings.target != 'x86_64-unknown-linux-musl'
-      - name: Workaround rustup doc file removal error
-        if: contains(matrix.settings.target, '-musl')
-        run: |
-          TOOLCHAIN_DIR="$(rustup show home)/toolchains/stable-${{ matrix.settings.target }}"
-          DOC_DIR="$TOOLCHAIN_DIR/share/doc/rust"
-          mkdir -p "$DOC_DIR"
-          touch "$DOC_DIR/README.md" "$DOC_DIR/COPYRIGHT" "$DOC_DIR/LICENSE-APACHE"
+          if: matrix.settings.target != 'x86_64-unknown-linux-musl'
       - name: Cache cargo
         uses: actions/cache@v4
         with:
