@@ -37,10 +37,18 @@ jobs:
           node-version: 22
           cache: 'pnpm'
 
-      - name: Install
-        uses: dtolnay/rust-toolchain@stable
-        # with:
-        #   components: clippy, rustfmt
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy, rustfmt
+
+      - name: Install dependencies
+        run: cargo fetch
+
+      - name: Run cargo fmt
+        run: cargo fmt -- --check
+
+      - name: Run cargo clippy
+        run: cargo clippy --all-targets --all-features -- -D warnings
 
       - name: Install dependencies
         run: pnpm install
@@ -48,11 +56,11 @@ jobs:
       - name: ESLint
         run: pnpm lint
 
-      # - name: Cargo fmt
-      #   run: cargo fmt -- --check
+      - name: Cargo fmt
+        run: cargo fmt -- --check
 
-      # - name: Clippy
-      #   run: cargo clippy
+      - name: Clippy
+        run: cargo clippy
 
   build:
     strategy:
