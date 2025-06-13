@@ -37,6 +37,12 @@ jobs:
           node-version: 22
           cache: 'pnpm'
 
+      - name: Remove Rust toolchain (workaround for clippy removal error)
+        run: rustup toolchain remove stable || true
+
+      - name: Install Rust toolchain
+        run: rustup toolchain install stable
+
       - name: Install
         uses: dtolnay/rust-toolchain@stable
         with:
