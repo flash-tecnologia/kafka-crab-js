@@ -43,6 +43,7 @@ type DisconnectSignal = (watch::Sender<()>, watch::Receiver<()>);
 #[napi]
 pub struct KafkaConsumer {
   client_config: ClientConfig,
+  consumer_config: ConsumerConfiguration,
   stream_consumer: StreamConsumer<KafkaCrabContext>,
   fetch_metadata_timeout: Duration,
   disconnect_signal: DisconnectSignal,
@@ -63,6 +64,7 @@ impl KafkaConsumer {
 
     Ok(KafkaConsumer {
       client_config: client_config.clone(),
+      consumer_config: consumer_configuration.clone(),
       stream_consumer,
       fetch_metadata_timeout: Duration::from_millis(
         consumer_configuration.fetch_metadata_timeout.map_or_else(
@@ -72,6 +74,19 @@ impl KafkaConsumer {
       ),
       disconnect_signal: watch::channel(()),
     })
+  }
+
+  #[napi]
+  pub fn get_config(&self) -> Result<ConsumerConfiguration> {
+    Ok(self.consumer_config.clone())
+  }
+
+  #[napi]
+  pub fn get_subscription(&self) -> Result<Vec<TopicPartition>> {
+    match self.stream_consumer.subscription() {
+      Ok(v) => Ok(convert_tpl_to_array_of_topic_partition(&v)),
+      Err(e) => Err(e.into_napi_error("Error while getting subscription")),
+    }
   }
 
   #[napi(

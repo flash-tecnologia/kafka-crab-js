@@ -6,6 +6,8 @@ export declare class KafkaClientConfig {
 }
 
 export declare class KafkaConsumer {
+  getConfig(): ConsumerConfiguration
+  getSubscription(): Array<TopicPartition>
   onEvents(callback: (error: Error | undefined, event: KafkaEvent) => void): void
   subscribe(topicConfigs: string | Array<TopicPartitionConfig>): Promise<void>
   pause(): void
