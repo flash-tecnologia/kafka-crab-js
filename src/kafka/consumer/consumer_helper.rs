@@ -111,7 +111,7 @@ pub async fn try_create_topic(
   client_config: &ClientConfig,
   fetch_metadata_timeout: Duration,
 ) -> anyhow::Result<()> {
-  let admin = KafkaAdmin::new(client_config, Some(fetch_metadata_timeout));
+  let admin = KafkaAdmin::new(client_config, Some(fetch_metadata_timeout))?;
   let result = admin.create_topic(topics).await;
   if let Err(e) = result {
     warn!("Fail to create topic {:?}", e);

@@ -25,6 +25,7 @@ use super::model::{
 };
 
 const DEFAULT_QUEUE_TIMEOUT: i64 = 5000;
+const MAX_QUEUE_TIMEOUT: i64 = 300000; // 5 minutes max
 
 type ProducerDeliveryResult = (OwnedMessage, Option<KafkaError>, Arc<String>);
 
@@ -53,12 +54,16 @@ impl<Part: Partitioner + Send + Sync> ProducerContext<Part> for CollectingContex
   type DeliveryOpaque = Arc<String>;
 
   fn delivery(&self, delivery_result: &DeliveryResult, delivery_opaque: Self::DeliveryOpaque) {
-    let mut results = self.results.lock().unwrap();
-    let (message, err) = match *delivery_result {
-      Ok(ref message) => (message.detach(), None),
-      Err((ref err, ref message)) => (message.detach(), Some(err.clone())),
-    };
-    results.insert((*delivery_opaque).clone(), (message, err, delivery_opaque));
+    if let Ok(mut results) = self.results.lock() {
+      let (message, err) = match *delivery_result {
+        Ok(ref message) => (message.detach(), None),
+        Err((ref err, ref message)) => (message.detach(), Some(err.clone())),
+      };
+      results.insert((*delivery_opaque).clone(), (message, err, delivery_opaque));
+    } else {
+      // Log error but don't panic on poisoned mutex
+      debug!("Failed to acquire mutex lock in delivery callback - mutex poisoned");
+    }
   }
 
   fn get_custom_partitioner(&self) -> Option<&Part> {
@@ -69,14 +74,13 @@ impl<Part: Partitioner + Send + Sync> ProducerContext<Part> for CollectingContex
 fn threaded_producer_with_context<Part, C>(
   context: C,
   client_config: ClientConfig,
-) -> ThreadedProducer<C, Part>
+) -> std::result::Result<ThreadedProducer<C, Part>, KafkaError>
 where
   Part: Partitioner + Send + Sync + 'static,
   C: ProducerContext<Part>,
 {
   client_config
     .create_with_context::<C, ThreadedProducer<_, _>>(context)
-    .unwrap()
 }
 
 #[napi]
@@ -99,10 +103,21 @@ impl KafkaProducer {
       producer_config.extend(config);
     }
 
+    let validated_timeout = match producer_configuration.queue_timeout {
+      Some(t) => {
+        if t < 0 {
+          DEFAULT_QUEUE_TIMEOUT
+        } else if t > MAX_QUEUE_TIMEOUT {
+          MAX_QUEUE_TIMEOUT
+        } else {
+          t
+        }
+      }
+      None => DEFAULT_QUEUE_TIMEOUT,
+    };
+    
     let queue_timeout = Duration::from_millis(
-      producer_configuration
-        .queue_timeout
-        .unwrap_or(DEFAULT_QUEUE_TIMEOUT)
+      validated_timeout
         .try_into()
         .map_err(|e| Error::new(Status::GenericFailure, e))?,
     );
@@ -115,7 +130,8 @@ impl KafkaProducer {
 
     let context = CollectingContext::new();
     let producer: ThreadedProducer<CollectingContext> =
-      threaded_producer_with_context(context.clone(), producer_config);
+      threaded_producer_with_context(context.clone(), producer_config)
+        .map_err(|e| Error::new(Status::GenericFailure, format!("Failed to create producer: {}", e)))?;
 
     Ok(KafkaProducer {
       queue_timeout,
@@ -197,7 +213,8 @@ impl KafkaProducer {
       .flush(self.queue_timeout)
       .map_err(|e| Error::new(Status::GenericFailure, e))?;
 
-    let mut delivery_results = self.context.results.lock().unwrap();
+    let mut delivery_results = self.context.results.lock()
+      .map_err(|_| Error::new(Status::GenericFailure, "Mutex poisoned in flush_delivery_results"))?;
     let result: Vec<RecordMetadata> = delivery_results
       .iter()
       .map(|(_, (message, error, _))| to_record_metadata(message, error))
@@ -215,7 +232,8 @@ impl KafkaProducer {
       .flush(self.queue_timeout)
       .map_err(|e| Error::new(Status::GenericFailure, e))?;
 
-    let mut delivery_results = self.context.results.lock().unwrap();
+    let mut delivery_results = self.context.results.lock()
+      .map_err(|_| Error::new(Status::GenericFailure, "Mutex poisoned in flush_delivery_results_with_filter"))?;
     let result = delivery_results
       .iter()
       .filter(|(id, _)| ids.contains(*id))

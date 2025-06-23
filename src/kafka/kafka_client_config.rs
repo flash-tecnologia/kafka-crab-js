@@ -3,7 +3,7 @@ use std::{collections::HashMap, fmt, str::FromStr};
 use napi::{bindgen_prelude::*, Result};
 use rdkafka::config::{ClientConfig, RDKafkaLogLevel};
 
-use tracing::Level;
+use tracing::{Level, warn};
 
 use super::{
   consumer::{kafka_consumer::KafkaConsumer, model::ConsumerConfiguration},
@@ -28,6 +28,29 @@ impl fmt::Display for SecurityProtocol {
       SecurityProtocol::SaslSsl => write!(f, "sasl_ssl"),
     }
   }
+}
+
+/// Basic sanitization for configuration values - let rdkafka handle validation
+fn sanitize_config_values(config: HashMap<String, String>) -> HashMap<String, String> {
+  let mut sanitized_config = HashMap::new();
+  
+  for (key, value) in config {
+    // Only apply basic sanitization for obviously problematic values
+    if key.contains("password") || key.contains("secret") || key.contains("key") {
+      // Prevent excessively long credential values that might indicate an attack
+      if value.len() > 10000 {
+        warn!("Configuration value for '{}' is extremely long ({}), truncating for security", key, value.len());
+        sanitized_config.insert(key, value.chars().take(10000).collect());
+      } else {
+        sanitized_config.insert(key, value);
+      }
+    } else {
+      // For non-sensitive values, pass through as-is - let rdkafka validate
+      sanitized_config.insert(key, value);
+    }
+  }
+  
+  sanitized_config
 }
 
 #[derive(Clone, Debug)]
@@ -63,8 +86,9 @@ impl KafkaClientConfig {
       .try_init()
     {
       Ok(_) => {}
-      Err(e) => {
-        eprintln!("Failed to initialize tracing: {:?}", e);
+      Err(_) => {
+        // Tracing initialization failed, but we continue without detailed logging
+        // This is a non-critical error that shouldn't expose system details
       }
     };
     KafkaClientConfig::with_kafka_configuration(kafka_configuration)
@@ -97,7 +121,8 @@ impl KafkaClientConfig {
       rdkafka_client_config.set("security.protocol", security_protocol.to_string());
     }
     if let Some(config) = configuration {
-      for (key, value) in config {
+      let sanitized_config = sanitize_config_values(config);
+      for (key, value) in sanitized_config {
         rdkafka_client_config.set(key, value);
       }
     }

@@ -37,6 +37,23 @@ use super::{
 use tokio::select;
 
 pub const DEFAULT_SEEK_TIMEOUT: i64 = 1500;
+const MAX_SEEK_TIMEOUT: i64 = 300000; // 5 minutes max
+
+/// Validates and bounds-checks timeout values
+fn validate_timeout(timeout: Option<i64>) -> i64 {
+  match timeout {
+    Some(t) => {
+      if t < 0 {
+        DEFAULT_SEEK_TIMEOUT
+      } else if t > MAX_SEEK_TIMEOUT {
+        MAX_SEEK_TIMEOUT
+      } else {
+        t
+      }
+    }
+    None => DEFAULT_SEEK_TIMEOUT,
+  }
+}
 
 type DisconnectSignal = (watch::Sender<()>, watch::Receiver<()>);
 
@@ -253,7 +270,7 @@ impl KafkaConsumer {
         &topic,
         partition,
         offset,
-        Duration::from_millis(timeout.unwrap_or(DEFAULT_SEEK_TIMEOUT) as u64),
+        Duration::from_millis(validate_timeout(timeout) as u64),
       )
       .map_err(|e| e.into_napi_error("Error while seeking"))?;
     Ok(())
