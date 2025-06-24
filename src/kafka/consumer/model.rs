@@ -28,6 +28,7 @@ pub struct ConsumerConfiguration {
   pub enable_auto_commit: Option<bool>,
   pub configuration: Option<HashMap<String, String>>,
   pub fetch_metadata_timeout: Option<i64>,
+  pub max_batch_messages: Option<u32>,
 }
 
 #[napi(string_enum)]

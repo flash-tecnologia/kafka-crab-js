@@ -24,9 +24,11 @@ pub struct KafkaAdmin<'a> {
 }
 
 impl<'a> KafkaAdmin<'a> {
-  pub fn new(client_config: &'a ClientConfig, fetch_metadata_timeout: Option<Duration>) -> Result<Self, KafkaError> {
-    let admin_client: AdminClient<DefaultClientContext> = client_config
-      .create()?;
+  pub fn new(
+    client_config: &'a ClientConfig,
+    fetch_metadata_timeout: Option<Duration>,
+  ) -> Result<Self, KafkaError> {
+    let admin_client: AdminClient<DefaultClientContext> = client_config.create()?;
 
     Ok(KafkaAdmin {
       client_config,

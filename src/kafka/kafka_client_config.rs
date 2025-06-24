@@ -3,7 +3,7 @@ use std::{collections::HashMap, fmt, str::FromStr};
 use napi::{bindgen_prelude::*, Result};
 use rdkafka::config::{ClientConfig, RDKafkaLogLevel};
 
-use tracing::{Level, warn};
+use tracing::{warn, Level};
 
 use super::{
   consumer::{kafka_consumer::KafkaConsumer, model::ConsumerConfiguration},
@@ -33,13 +33,17 @@ impl fmt::Display for SecurityProtocol {
 /// Basic sanitization for configuration values - let rdkafka handle validation
 fn sanitize_config_values(config: HashMap<String, String>) -> HashMap<String, String> {
   let mut sanitized_config = HashMap::new();
-  
+
   for (key, value) in config {
     // Only apply basic sanitization for obviously problematic values
     if key.contains("password") || key.contains("secret") || key.contains("key") {
       // Prevent excessively long credential values that might indicate an attack
       if value.len() > 10000 {
-        warn!("Configuration value for '{}' is extremely long ({}), truncating for security", key, value.len());
+        warn!(
+          "Configuration value for '{}' is extremely long ({}), truncating for security",
+          key,
+          value.len()
+        );
         sanitized_config.insert(key, value.chars().take(10000).collect());
       } else {
         sanitized_config.insert(key, value);
@@ -49,7 +53,7 @@ fn sanitize_config_values(config: HashMap<String, String>) -> HashMap<String, St
       sanitized_config.insert(key, value);
     }
   }
-  
+
   sanitized_config
 }
 

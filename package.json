@@ -1,6 +1,6 @@
 {
   "name": "kafka-crab-js",
-  "version": "1.4.1",
+  "version": "1.5.0-alpha.1",
   "type": "module",
   "engines": {
     "node": ">=20"
@@ -45,9 +45,9 @@
   },
   "devDependencies": {
     "@faker-js/faker": "^9.8.0",
-    "@napi-rs/cli": "3.0.0-alpha.89",
+    "@napi-rs/cli": "3.0.0-alpha.91",
     "@types/copyfiles": "^2.4.4",
-    "@types/node": "^24.0.3",
+    "@types/node": "^24.0.4",
     "copyfiles": "^2.4.1",
     "dprint": "^0.50.0",
     "esbuild": "^0.25.5",
