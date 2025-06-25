@@ -1,4 +1,5 @@
 use std::{
+  collections::HashSet,
   sync::{
     atomic::{AtomicU64, Ordering},
     Arc,
@@ -152,18 +153,18 @@ impl KafkaProducer {
   pub async fn send(&self, producer_record: ProducerRecord) -> Result<Vec<RecordMetadata>> {
     let topic = producer_record.topic.as_str();
 
-    // Pre-allocate Vec capacity for better performance and preserve insertion order
+    // Generate IDs in order and send messages with corresponding IDs
     let mut ids = Vec::with_capacity(producer_record.messages.len());
-    for _ in &producer_record.messages {
-      ids.push(self.generate_message_id());
-    }
-
-    for (message, record_id) in producer_record.messages.into_iter().zip(ids.iter()) {
-      self.send_single_message(topic, &message, record_id)?;
+    for message in &producer_record.messages {
+      let record_id = self.generate_message_id();
+      ids.push(record_id.clone());
+      self.send_single_message(topic, message, &record_id)?;
     }
 
     if self.auto_flush {
-      self.flush_delivery_results_with_filter(&ids)
+      // Convert to HashSet for O(1) lookup performance in filtering
+      let ids_set: HashSet<String> = ids.into_iter().collect();
+      self.flush_delivery_results_with_filter(&ids_set)
     } else {
       Ok(vec![])
     }
@@ -225,7 +226,7 @@ impl KafkaProducer {
     Ok(result)
   }
 
-  fn flush_delivery_results_with_filter(&self, ids: &[String]) -> Result<Vec<RecordMetadata>> {
+  fn flush_delivery_results_with_filter(&self, ids: &HashSet<String>) -> Result<Vec<RecordMetadata>> {
     self
       .producer
       .flush(self.queue_timeout)
