@@ -1,11 +1,13 @@
 use std::{
-  collections::{HashMap, HashSet},
+  collections::HashSet,
   sync::{
     atomic::{AtomicU64, Ordering},
-    Arc, Mutex,
+    Arc,
   },
   time::Duration,
 };
+
+use dashmap::DashMap;
 
 use nanoid::nanoid;
 use napi::{Error, Result, Status};
@@ -33,14 +35,14 @@ type ProducerDeliveryResult = (OwnedMessage, Option<KafkaError>, Arc<String>);
 
 #[derive(Clone)]
 struct CollectingContext<Part: Partitioner = NoCustomPartitioner> {
-  results: Arc<Mutex<HashMap<String, ProducerDeliveryResult>>>,
+  results: Arc<DashMap<String, ProducerDeliveryResult>>,
   partitioner: Option<Part>,
 }
 
 impl CollectingContext {
   fn new() -> CollectingContext {
     CollectingContext {
-      results: Arc::new(Mutex::new(HashMap::new())),
+      results: Arc::new(DashMap::new()),
       partitioner: None,
     }
   }
@@ -56,12 +58,13 @@ impl<Part: Partitioner + Send + Sync> ProducerContext<Part> for CollectingContex
   type DeliveryOpaque = Arc<String>;
 
   fn delivery(&self, delivery_result: &DeliveryResult, delivery_opaque: Self::DeliveryOpaque) {
-    let mut results = self.results.lock().unwrap();
     let (message, err) = match *delivery_result {
       Ok(ref message) => (message.detach(), None),
       Err((ref err, ref message)) => (message.detach(), Some(err.clone())),
     };
-    results.insert((*delivery_opaque).clone(), (message, err, delivery_opaque));
+    self
+      .results
+      .insert((*delivery_opaque).clone(), (message, err, delivery_opaque));
   }
 
   fn get_custom_partitioner(&self) -> Option<&Part> {
@@ -211,10 +214,13 @@ impl KafkaProducer {
       .flush(self.queue_timeout)
       .map_err(|e| Error::new(Status::GenericFailure, e))?;
 
-    let mut delivery_results = self.context.results.lock().unwrap();
+    let delivery_results = &self.context.results;
     let result: Vec<RecordMetadata> = delivery_results
       .iter()
-      .map(|(_, (message, error, _))| to_record_metadata(message, error))
+      .map(|entry| {
+        let (message, error, _) = entry.value();
+        to_record_metadata(message, error)
+      })
       .collect();
     delivery_results.clear();
     Ok(result)
@@ -229,12 +235,17 @@ impl KafkaProducer {
       .flush(self.queue_timeout)
       .map_err(|e| Error::new(Status::GenericFailure, e))?;
 
-    let mut delivery_results = self.context.results.lock().unwrap();
-    let result = delivery_results
+    let delivery_results = &self.context.results;
+    let result: Vec<RecordMetadata> = delivery_results
       .iter()
-      .filter(|(id, _)| ids.contains(*id))
-      .map(|(_, (message, error, _))| to_record_metadata(message, error))
+      .filter(|entry| ids.contains(entry.key()))
+      .map(|entry| {
+        let (message, error, _) = entry.value();
+        to_record_metadata(message, error)
+      })
       .collect();
+
+    // Remove processed entries
     delivery_results.retain(|key, _| !ids.contains(key));
     Ok(result)
   }
