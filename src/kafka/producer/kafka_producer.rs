@@ -153,18 +153,18 @@ impl KafkaProducer {
   pub async fn send(&self, producer_record: ProducerRecord) -> Result<Vec<RecordMetadata>> {
     let topic = producer_record.topic.as_str();
 
-    // Generate IDs in order and send messages with corresponding IDs
-    let mut ids = Vec::with_capacity(producer_record.messages.len());
-    for message in &producer_record.messages {
-      let record_id = self.generate_message_id();
-      ids.push(record_id.clone());
-      self.send_single_message(topic, message, &record_id)?;
+    // Pre-allocate HashSet capacity for better performance
+    let mut ids = HashSet::with_capacity(producer_record.messages.len());
+    for _ in &producer_record.messages {
+      ids.insert(self.generate_message_id());
+    }
+
+    for (message, record_id) in producer_record.messages.into_iter().zip(ids.iter()) {
+      self.send_single_message(topic, &message, record_id)?;
     }
 
     if self.auto_flush {
-      // Convert to HashSet for O(1) lookup performance in filtering
-      let ids_set: HashSet<String> = ids.into_iter().collect();
-      self.flush_delivery_results_with_filter(&ids_set)
+      self.flush_delivery_results_with_filter(&ids)
     } else {
       Ok(vec![])
     }
