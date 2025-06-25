@@ -33,7 +33,10 @@ export class KafkaStreamReadable extends Readable {
    * @param {number} [batchTimeoutMs=100] - Batch timeout in milliseconds (1-30000, invalid values use default)
    * @returns {KafkaStreamReadable} This instance for chaining
    */
-  enableBatchMode(batchSize: number = DEFAULT_BATCH_SIZE, batchTimeoutMs: number = DEFAULT_BATCH_TIMEOUT_MS): KafkaStreamReadable {
+  enableBatchMode(
+    batchSize: number = DEFAULT_BATCH_SIZE,
+    batchTimeoutMs: number = DEFAULT_BATCH_TIMEOUT_MS,
+  ): KafkaStreamReadable {
     this.batchSize = batchSize
 
     // Use fallback validation like Rust layer
@@ -72,7 +75,7 @@ export class KafkaStreamReadable extends Readable {
     return {
       enabled: this.useBatchMode,
       batchSize: this.batchSize,
-      batchTimeoutMs: this.batchTimeoutMs
+      batchTimeoutMs: this.batchTimeoutMs,
     }
   }
 
