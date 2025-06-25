@@ -226,7 +226,10 @@ impl KafkaProducer {
     Ok(result)
   }
 
-  fn flush_delivery_results_with_filter(&self, ids: &HashSet<String>) -> Result<Vec<RecordMetadata>> {
+  fn flush_delivery_results_with_filter(
+    &self,
+    ids: &HashSet<String>,
+  ) -> Result<Vec<RecordMetadata>> {
     self
       .producer
       .flush(self.queue_timeout)
