@@ -1,10 +1,11 @@
-import { Readable } from 'stream'
+import { Readable, ReadableOptions } from 'stream'
 
 import { KafkaConsumer, OffsetModel, TopicPartitionConfig } from '../js-binding.js'
 import { CommitMode } from '../js-binding.js'
 
 // Constants for batch timeout validation
 const DEFAULT_BATCH_TIMEOUT_MS = 100
+const DEFAULT_BATCH_SIZE = 10
 const MAX_BATCH_TIMEOUT_MS = 30000
 
 /**
@@ -19,8 +20,8 @@ export class KafkaStreamReadable extends Readable {
   /**
    * Creates a KafkaStreamReadable instance
    */
-  constructor(private readonly kafkaConsumer: KafkaConsumer) {
-    super({ objectMode: true })
+  constructor(private readonly kafkaConsumer: KafkaConsumer, opts: ReadableOptions = { objectMode: true }) {
+    super(opts)
     if (!kafkaConsumer) {
       throw new Error('A valid KafkaConsumer instance is required.')
     }
@@ -32,7 +33,7 @@ export class KafkaStreamReadable extends Readable {
    * @param {number} [batchTimeoutMs=100] - Batch timeout in milliseconds (1-30000, invalid values use default)
    * @returns {KafkaStreamReadable} This instance for chaining
    */
-  enableBatchMode(batchSize: number = 10, batchTimeoutMs: number = DEFAULT_BATCH_TIMEOUT_MS): KafkaStreamReadable {
+  enableBatchMode(batchSize: number = DEFAULT_BATCH_SIZE, batchTimeoutMs: number = DEFAULT_BATCH_TIMEOUT_MS): KafkaStreamReadable {
     this.batchSize = batchSize
 
     // Use fallback validation like Rust layer
