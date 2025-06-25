@@ -100,8 +100,7 @@ impl KafkaConsumer {
     let max_batch_messages = consumer_configuration
       .max_batch_messages
       .unwrap_or(DEFAULT_MAX_BATCH_MESSAGES)
-      .min(MAX_BATCH_MESSAGES)
-      .max(1);
+      .clamp(1, MAX_BATCH_MESSAGES);
 
     Ok(KafkaConsumer {
       client_config: client_config.clone(),
