@@ -305,6 +305,19 @@ jobs:
           then
             echo "//registry.npmjs.org/:_authToken=$NPM_TOKEN" >> ~/.npmrc
             npm publish --tag next --access public
+          elif echo "$COMMIT_MSG" | grep -E "(alpha|beta|rc)";
+          then
+            echo "//registry.npmjs.org/:_authToken=$NPM_TOKEN" >> ~/.npmrc
+            if echo "$COMMIT_MSG" | grep "alpha";
+            then
+              npm publish --tag alpha --access public
+            elif echo "$COMMIT_MSG" | grep "beta";
+            then
+              npm publish --tag beta --access public
+            elif echo "$COMMIT_MSG" | grep "rc";
+            then
+              npm publish --tag rc --access public
+            fi
           else
             echo "Not a release, skipping publish"
           fi
