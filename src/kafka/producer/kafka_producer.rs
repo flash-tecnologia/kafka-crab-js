@@ -143,11 +143,11 @@ impl KafkaProducer {
   pub async fn send(&self, producer_record: ProducerRecord) -> Result<Vec<RecordMetadata>> {
     let topic = producer_record.topic.as_str();
 
-    let ids: HashSet<String> = producer_record
-      .messages
-      .iter()
-      .map(|_| nanoid!(14))
-      .collect();
+    // Pre-allocate HashSet capacity for better performance
+    let mut ids = HashSet::with_capacity(producer_record.messages.len());
+    for _ in &producer_record.messages {
+      ids.insert(nanoid!(14));
+    }
 
     for (message, record_id) in producer_record.messages.into_iter().zip(ids.iter()) {
       self.send_single_message(topic, &message, record_id)?;
