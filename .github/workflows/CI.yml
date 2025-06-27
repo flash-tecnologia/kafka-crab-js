@@ -94,7 +94,7 @@ jobs:
           node-version: 22
           cache: pnpm
       - name: Install
-        uses: dtolnay/rust-toolchain@1.86
+        uses: dtolnay/rust-toolchain@stable
         with:
           toolchain: stable
           targets: ${{ matrix.settings.target }}
@@ -299,7 +299,7 @@ jobs:
             TAG_NAME=${GITHUB_REF#refs/tags/}
             echo "Publishing for tag: $TAG_NAME"
             echo "//registry.npmjs.org/:_authToken=$NPM_TOKEN" >> ~/.npmrc
-            
+
             if [[ $TAG_NAME =~ v?[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
               echo "Stable release detected"
               npm publish --access public

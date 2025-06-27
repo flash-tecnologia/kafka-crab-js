@@ -3,7 +3,7 @@ use std::{collections::HashMap, fmt, str::FromStr};
 use napi::{bindgen_prelude::*, Result};
 use rdkafka::config::{ClientConfig, RDKafkaLogLevel};
 
-use tracing::{warn, Level};
+use tracing::{trace, warn, Level};
 
 use super::{
   consumer::{kafka_consumer::KafkaConsumer, model::ConsumerConfiguration},
@@ -89,10 +89,11 @@ impl KafkaClientConfig {
       .with_ansi(false)
       .try_init()
     {
-      Ok(_) => {}
-      Err(_) => {
-        // Tracing initialization failed, but we continue without detailed logging
-        // This is a non-critical error that shouldn't expose system details
+      Ok(_) => {
+          trace!("Tracing initialized successfully");
+      }
+      Err(e) => {
+          warn!("Tracing initialization failed, but we continue without detailed logging {:?}", e);
       }
     };
     KafkaClientConfig::with_kafka_configuration(kafka_configuration)

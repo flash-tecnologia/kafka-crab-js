@@ -47,7 +47,7 @@
     "@faker-js/faker": "^9.8.0",
     "@napi-rs/cli": "3.0.0-alpha.91",
     "@types/copyfiles": "^2.4.4",
-    "@types/node": "^24.0.4",
+    "@types/node": "^24.0.6",
     "copyfiles": "^2.4.1",
     "dprint": "^0.50.0",
     "esbuild": "^0.25.5",
