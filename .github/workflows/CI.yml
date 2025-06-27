@@ -93,6 +93,8 @@ jobs:
         with:
           node-version: 22
           cache: pnpm
+      - name: Clean rustup toolchain
+        run: rustup toolchain uninstall stable || true
       - name: Install
         uses: dtolnay/rust-toolchain@stable
         with:
