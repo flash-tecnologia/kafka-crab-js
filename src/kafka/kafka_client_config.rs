@@ -30,33 +30,6 @@ impl fmt::Display for SecurityProtocol {
   }
 }
 
-/// Basic sanitization for configuration values - let rdkafka handle validation
-fn sanitize_config_values(config: HashMap<String, String>) -> HashMap<String, String> {
-  let mut sanitized_config = HashMap::new();
-
-  for (key, value) in config {
-    // Only apply basic sanitization for obviously problematic values
-    if key.contains("password") || key.contains("secret") || key.contains("key") {
-      // Prevent excessively long credential values that might indicate an attack
-      if value.len() > 10000 {
-        warn!(
-          "Configuration value for '{}' is extremely long ({}), truncating for security",
-          key,
-          value.len()
-        );
-        sanitized_config.insert(key, value.chars().take(10000).collect());
-      } else {
-        sanitized_config.insert(key, value);
-      }
-    } else {
-      // For non-sensitive values, pass through as-is - let rdkafka validate
-      sanitized_config.insert(key, value);
-    }
-  }
-
-  sanitized_config
-}
-
 #[derive(Clone, Debug)]
 #[napi(object)]
 pub struct KafkaConfiguration {
@@ -129,8 +102,7 @@ impl KafkaClientConfig {
       rdkafka_client_config.set("security.protocol", security_protocol.to_string());
     }
     if let Some(config) = configuration {
-      let sanitized_config = sanitize_config_values(config);
-      for (key, value) in sanitized_config {
+      for (key, value) in config {
         rdkafka_client_config.set(key, value);
       }
     }

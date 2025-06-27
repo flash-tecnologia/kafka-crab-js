@@ -193,7 +193,8 @@ impl KafkaConsumer {
     try_subscribe(&self.stream_consumer, &topics_name)
       .map_err(|e| e.into_napi_error("error while subscribing"))?;
 
-    topics.iter().for_each(|item| {
+    // Process topic configurations and handle errors properly
+    for item in topics.iter() {
       if let Some(all_offsets) = item.all_offsets.clone() {
         debug!(
           "Subscribing to topic: {}. Setting all partitions to offset: {:?}",
@@ -205,8 +206,7 @@ impl KafkaConsumer {
           &item.topic,
           self.fetch_metadata_timeout,
         )
-        .map_err(|e| e.into_napi_error("error while setting offset"))
-        .unwrap();
+        .map_err(|e| e.into_napi_error("error while setting offset"))?;
       } else if let Some(partition_offset) = item.partition_offset.clone() {
         debug!(
           "Subscribing to topic: {} with partition offsets: {:?}",
@@ -219,10 +219,9 @@ impl KafkaConsumer {
           &self.stream_consumer,
           self.fetch_metadata_timeout,
         )
-        .map_err(|e| e.into_napi_error("error while assigning offset"))
-        .unwrap();
+        .map_err(|e| e.into_napi_error("error while assigning offset"))?;
       };
-    });
+    }
 
     Ok(())
   }
@@ -267,10 +266,15 @@ impl KafkaConsumer {
     // First unsubscribe from topics
     self.stream_consumer.unsubscribe();
 
-    // Then send disconnect signal
+    // Then send disconnect signal - use non-blocking approach
+    // Note: watch channels have a single slot, so send() replaces the current value
+    // If there are no receivers, the send will succeed but the value will be ignored
     let tx = self.disconnect_signal.0.clone();
-    tx.send(())
-      .map_err(|e| e.into_napi_error("Error sending disconnect signal"))?;
+    if tx.send(()).is_err() {
+      // If send fails, it usually means no receivers are listening
+      // This is not necessarily an error during shutdown
+      warn!("Disconnect signal could not be sent - no active receivers");
+    }
 
     Ok(())
   }

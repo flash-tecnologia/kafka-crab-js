@@ -4,7 +4,7 @@ use rdkafka::{
   ClientContext, TopicPartitionList,
 };
 use tokio::sync::watch;
-use tracing::{debug, error};
+use tracing::{debug, warn};
 
 use crate::kafka::consumer::consumer_helper::convert_tpl_to_array_of_topic_partition;
 
@@ -53,13 +53,11 @@ impl KafkaCrabContext {
   }
 
   fn send_event(&self, event: KafkaEvent) {
-    self
-      .event_channel
-      .0
-      .send(Some(event))
-      .unwrap_or_else(|err| {
-        error!("Error while sending event: {:?}", err);
-      });
+    // Attempt to send event - watch channels replace the current value, so no unbounded growth
+    if let Err(err) = self.event_channel.0.send(Some(event)) {
+      // Log at debug level rather than error since receiver disconnection during shutdown is normal
+      warn!("Event channel send failed (likely no receivers): {:?}", err);
+    }
   }
 }
 

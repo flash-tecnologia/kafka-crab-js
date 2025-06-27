@@ -75,14 +75,19 @@ impl<Part: Partitioner + Send + Sync> ProducerContext<Part> for CollectingContex
 fn threaded_producer_with_context<Part, C>(
   context: C,
   client_config: ClientConfig,
-) -> ThreadedProducer<C, Part>
+) -> Result<ThreadedProducer<C, Part>>
 where
   Part: Partitioner + Send + Sync + 'static,
   C: ProducerContext<Part>,
 {
   client_config
     .create_with_context::<C, ThreadedProducer<_, _>>(context)
-    .unwrap()
+    .map_err(|e| {
+      Error::new(
+        Status::GenericFailure,
+        format!("Failed to create producer: {e}"),
+      )
+    })
 }
 
 #[napi]
@@ -123,7 +128,7 @@ impl KafkaProducer {
 
     let context = CollectingContext::new();
     let producer: ThreadedProducer<CollectingContext> =
-      threaded_producer_with_context(context.clone(), producer_config);
+      threaded_producer_with_context(context.clone(), producer_config)?;
 
     Ok(KafkaProducer {
       queue_timeout,
