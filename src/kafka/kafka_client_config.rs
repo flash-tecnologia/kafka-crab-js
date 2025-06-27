@@ -90,10 +90,13 @@ impl KafkaClientConfig {
       .try_init()
     {
       Ok(_) => {
-          trace!("Tracing initialized successfully");
+        trace!("Tracing initialized successfully");
       }
       Err(e) => {
-          warn!("Tracing initialization failed, but we continue without detailed logging {:?}", e);
+        warn!(
+          "Tracing initialization failed, but we continue without detailed logging {:?}",
+          e
+        );
       }
     };
     KafkaClientConfig::with_kafka_configuration(kafka_configuration)
