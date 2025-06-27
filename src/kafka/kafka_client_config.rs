@@ -163,7 +163,7 @@ impl KafkaClientConfig {
     KafkaConsumer::new(self, &consumer_configuration).map_err(|e| {
       Error::new(
         Status::GenericFailure,
-        format!("Failed to create stream consumer: {:?}", e),
+        format!("Failed to create stream consumer: {e:?}"),
       )
     })
   }

@@ -98,8 +98,7 @@ pub fn try_subscribe(consumer: &LoggingConsumer, topics: &[String]) -> anyhow::R
   let topics_ref = topics.iter().map(|x| x.as_str()).collect::<Vec<&str>>();
   consumer.subscribe(topics_ref.as_slice()).map_err(|e| {
     anyhow::Error::msg(format!(
-      "Can't subscribe to specified topic(s): {:?}. Error: {:?}",
-      topics_ref, e
+      "Can't subscribe to specified topic(s): {topics_ref:?}. Error: {e:?}"
     ))
   })?;
   debug!("Subscribed to topic(s): {:?}", topics_ref);
@@ -115,7 +114,7 @@ pub async fn try_create_topic(
   let result = admin.create_topic(topics).await;
   if let Err(e) = result {
     warn!("Fail to create topic {:?}", e);
-    return Err(anyhow::Error::msg(format!("Fail to create topic: {:?}", e)));
+    return Err(anyhow::Error::msg(format!("Fail to create topic: {e:?}")));
   }
   debug!("Topic(s) created: {:?}", topics);
   Ok(())
