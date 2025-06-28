@@ -86,12 +86,21 @@ impl KafkaClientConfig {
       client_id,
       configuration,
       broker_address_family,
+      log_level,
       ..
     } = kafka_configuration.clone();
 
     let mut rdkafka_client_config = ClientConfig::new();
 
-    rdkafka_client_config.set_log_level(RDKafkaLogLevel::Debug);
+    // Set rdkafka log level based on user configuration, defaulting to Error for production safety
+    let rdkafka_log_level = match log_level.as_deref().unwrap_or("error") {
+      "trace" | "debug" => RDKafkaLogLevel::Debug,
+      "info" => RDKafkaLogLevel::Info,
+      "warn" => RDKafkaLogLevel::Warning,
+      "error" => RDKafkaLogLevel::Error,
+      _ => RDKafkaLogLevel::Error, // Safe default for unknown levels
+    };
+    rdkafka_client_config.set_log_level(rdkafka_log_level);
     rdkafka_client_config.set("bootstrap.servers", brokers);
     rdkafka_client_config.set("client.id", client_id);
     rdkafka_client_config.set(
