@@ -1,4 +1,4 @@
-use std::{collections::HashMap, fmt, str::FromStr};
+use std::{collections::HashMap, fmt, str::FromStr, sync::Once};
 
 use napi::{bindgen_prelude::*, Result};
 use rdkafka::config::{ClientConfig, RDKafkaLogLevel};
@@ -9,6 +9,36 @@ use super::{
   consumer::{kafka_consumer::KafkaConsumer, model::ConsumerConfiguration},
   producer::{kafka_producer::KafkaProducer, model::ProducerConfiguration},
 };
+
+// Global singleton for tracing initialization
+static TRACING_INIT: Once = Once::new();
+
+/// Initialize tracing subscriber once globally
+/// This prevents "global default trace dispatcher already set" errors
+/// when multiple KafkaClient instances are created
+fn init_tracing_once(log_level: Option<String>) {
+  TRACING_INIT.call_once(|| {
+    let level = log_level
+      .as_deref()
+      .and_then(|s| Level::from_str(s).ok())
+      .unwrap_or(Level::ERROR);
+
+    match tracing_subscriber::fmt()
+      .with_max_level(level)
+      .json()
+      .with_ansi(false)
+      .try_init()
+    {
+      Ok(_) => {
+        trace!("Tracing initialized successfully with level: {:?}", level);
+      }
+      Err(e) => {
+        // This should never happen since we use Once, but handle it gracefully
+        warn!("Tracing initialization failed: {:?}", e);
+      }
+    }
+  });
+}
 
 #[derive(Clone, Debug)]
 #[napi(string_enum)]
@@ -53,25 +83,8 @@ pub struct KafkaClientConfig {
 impl KafkaClientConfig {
   #[napi(constructor)]
   pub fn new(kafka_configuration: KafkaConfiguration) -> Self {
-    let log_level = kafka_configuration.clone().log_level;
-    match tracing_subscriber::fmt()
-      .with_max_level(
-        Level::from_str(log_level.unwrap_or("error".to_owned()).as_str()).unwrap_or(Level::ERROR),
-      )
-      .json()
-      .with_ansi(false)
-      .try_init()
-    {
-      Ok(_) => {
-        trace!("Tracing initialized successfully");
-      }
-      Err(e) => {
-        warn!(
-          "Tracing initialization failed, but we continue without detailed logging {:?}",
-          e
-        );
-      }
-    };
+    // Initialize tracing once globally to prevent "global default trace dispatcher already set" errors
+    init_tracing_once(kafka_configuration.log_level.clone());
     KafkaClientConfig::with_kafka_configuration(kafka_configuration)
   }
 
