@@ -1,0 +1,109 @@
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "plugins": [
+    "unicorn",
+    "typescript",
+    "oxc"
+  ],
+  "env": {
+    "node": true,
+    "builtin": true,
+    "es2024": true,
+    "shared-node-browser": true
+  },
+  "categories": {
+    "correctness": "error",
+    "suspicious": "error",
+    "perf": "error",
+    "style": "error",
+    "restriction": "error"
+  },
+  "rules": {
+    "unicorn/no-null": "off",
+    "explicit-function-return-type": "off",
+    "no-rest-spread-properties": "off",
+    "no-optional-chaining": "off",
+    "no-async-await": "off",
+    "no-plusplus": "off",
+    "no-undefined": "off",
+    "no-magic-numbers": "off",
+    "yoda": "off",
+    "new-cap": "off",
+    "sort-keys": "off",
+    "consistent-type-imports": "error",
+    "no-ternary": "off",
+    "init-declarations": "off",
+    "func-names": "off",
+    "consistent-type-definitions": "off",
+    "sort-imports": "off",
+    "consistent-indexed-object-style": "off",
+    "func-style": "off",
+    "prefer-exponentiation-operator": "off",
+    "max-params": [
+      "error",
+      {
+        "max": 6,
+        "ignoreConstructor": true
+      }
+    ],
+    "unicorn/filename-case": [
+      "error",
+      {
+        "case": "kebabCase"
+      }
+    ],
+    "no-unused-vars": [
+      "error",
+      {
+        "args": "all",
+        "argsIgnorePattern": "^_",
+        "caughtErrors": "all",
+        "caughtErrorsIgnorePattern": "^_",
+        "destructuredArrayIgnorePattern": "^_",
+        "varsIgnorePattern": "^_",
+        "ignoreRestSiblings": true
+      }
+    ],
+    "@typescript-eslint/ban-ts-comment": [
+      "error",
+      {
+        "minimumDescriptionLength": 10
+      }
+    ]
+  },
+  "ignorePatterns": [
+    "*.mjs",
+    "dist/",
+    "coverage/",
+    "report/",
+    "**/*.mjs",
+    "**/dist/**",
+    "js-binding*.*"
+  ],
+  "globals": {
+    "__dirname": "off",
+    "__filename": "off",
+    "clearImmediate": "readonly",
+    "exports": "off",
+    "global": "readonly",
+    "module": "off",
+    "require": "off",
+    "setImmediate": "readonly"
+  },
+  "overrides": [
+    {
+      "files": [
+        "**/example/**",
+        "**/__test__/**"
+      ],
+      "rules": {
+        "no-undefined": "off",
+        "no-async-await": "off",
+        "no-console": "off",
+        "eslint/no-await-in-loop": "off",
+        "unicorn/no-await-expression-member": "off",
+        "unicorn/consistent-function-scoping": "off"
+      }
+    }
+  ]
+}
