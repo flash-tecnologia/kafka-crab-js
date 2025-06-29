@@ -1,20 +1,19 @@
-import { Readable, ReadableOptions } from 'stream'
+import { Readable, type ReadableOptions } from 'node:stream'
 
-import { KafkaConsumer, OffsetModel, TopicPartitionConfig } from '../js-binding.js'
-import { CommitMode } from '../js-binding.js'
+import type { CommitMode, KafkaConsumer, OffsetModel, TopicPartitionConfig } from '../js-binding.js'
 
 // Constants for batch timeout validation
 const DEFAULT_BATCH_TIMEOUT_MS = 100
 const DEFAULT_BATCH_SIZE = 10
-const MAX_BATCH_TIMEOUT_MS = 30000
+const MAX_BATCH_TIMEOUT_MS = 30_000
 
 /**
  * KafkaStreamReadable class
  * @extends Readable
  */
 export class KafkaStreamReadable extends Readable {
-  private useBatchMode: boolean = false
-  private batchSize: number = 10
+  private useBatchMode = false
+  private batchSize = 10
   private batchTimeoutMs: number = DEFAULT_BATCH_TIMEOUT_MS
 
   /**

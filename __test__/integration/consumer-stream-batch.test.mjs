@@ -328,7 +328,7 @@ await test('Consumer Stream Batch Mode Integration Tests', async (t) => {
     const receivedMessages = []
     const timeoutStart = Date.now()
     
-    const timeoutPromise = new Promise((resolve, reject) => {
+    const timeoutPromise = new Promise((resolve) => {
       // Add a safety timeout to prevent hanging
       const safetyTimeout = setTimeout(() => {
         console.log(`Batch timeout test: Safety timeout reached. Received ${receivedMessages.length} messages.`)

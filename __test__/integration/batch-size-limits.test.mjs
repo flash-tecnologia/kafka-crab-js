@@ -88,12 +88,10 @@ await test('Batch Size Limits Integration Tests', async (t) => {
       
       // Capture console output to check for warnings
       const originalConsoleWarn = console.warn
-      let warningReceived = false
       console.warn = (...args) => {
         const message = args.join(' ')
-        if (EXPECTED_WARNING_PATTERNS.some(pattern => pattern.test(message))) {
-          warningReceived = true
-        }
+        // Check if any expected warning patterns match
+        EXPECTED_WARNING_PATTERNS.some(pattern => pattern.test(message))
         originalConsoleWarn(...args)
       }
       
@@ -141,7 +139,6 @@ await test('Batch Size Limits Integration Tests', async (t) => {
     ])
     
     const receivedMessages = []
-    const batchSizes = []
     
     const streamPromise = new Promise((resolve, reject) => {
       const timeout = setTimeout(() => {

@@ -37,7 +37,7 @@ async function populateTestTopic() {
 
     for (let j = 0; j < currentBatchSize; j++) {
       messages.push({
-        payload: Buffer.from(`Message ${i + j}: ${Date.now()}`)
+        payload: Buffer.from(`Message ${i + j}: ${Date.now()}`),
       })
     }
 
@@ -66,7 +66,7 @@ async function batchConsumptionDemo() {
     enableAutoCommit: true,
     configuration: {
       'auto.offset.reset': 'earliest', // Start from beginning
-    }
+    },
   })
 
   await consumer.subscribe([{ topic: TOPIC_NAME }])
@@ -93,30 +93,37 @@ async function batchConsumptionDemo() {
       const elapsed = Date.now() - startTime
       const rate = (totalProcessed / elapsed) * 1000
       const progress = (totalProcessed / MESSAGE_COUNT * 100).toFixed(1)
-      console.log(`   Processed: ${totalProcessed.toLocaleString()}/${MESSAGE_COUNT.toLocaleString()} (${progress}%) - ${rate.toFixed(0)} msg/sec`)
+      console.log(
+        `   Processed: ${totalProcessed.toLocaleString()}/${MESSAGE_COUNT.toLocaleString()} (${progress}%) - ${
+          rate.toFixed(0)
+        } msg/sec`,
+      )
     }
   }
 
   const totalTime = Date.now() - startTime
   const finalRate = totalProcessed > 0 ? (totalProcessed / totalTime) * 1000 : 0
-  console.log(`✅ Batch processing: ${totalProcessed.toLocaleString()} messages in ${totalTime}ms (${finalRate.toFixed(0)} msg/sec)\n`)
+  console.log(
+    `✅ Batch processing: ${totalProcessed.toLocaleString()} messages in ${totalTime}ms (${
+      finalRate.toFixed(0)
+    } msg/sec)\n`,
+  )
 
   consumer.unsubscribe()
 }
 
-
 // Main demo
-console.log('🦀 Kafka Crab JS - Batch Processing Demo')  
+console.log('🦀 Kafka Crab JS - Batch Processing Demo')
 console.log('='.repeat(50))
 
 try {
   await populateTestTopic()
-  
+
   console.log('⏳ Waiting for commit...')
   await new Promise(resolve => setTimeout(resolve, 2000))
-  
+
   await batchConsumptionDemo()
-  
+
   console.log('🎉 Demo completed!')
 } catch (error) {
   console.error('❌ Error:', error)
