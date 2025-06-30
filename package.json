@@ -1,6 +1,6 @@
 {
   "name": "kafka-crab-js",
-  "version": "1.5.0",
+  "version": "1.5.1",
   "type": "module",
   "engines": {
     "node": ">=20"
@@ -30,6 +30,12 @@
     ]
   },
   "license": "MIT",
+  "author": "inaiat@gmail.com",
+  "homepage": "https://github.com/inaiat/kafka-crab-js",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/inaiat/kafka-crab-js.git"
+  },
   "keywords": [
     "kafka",
     "rust",
