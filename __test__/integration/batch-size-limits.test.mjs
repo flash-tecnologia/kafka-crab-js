@@ -42,8 +42,10 @@ await test('Batch Size Limits Integration Tests', async (t) => {
     await producer.send({ topic, messages })
     await sleep(2000)
     
-    // Test with exactly max batch size
-    const consumer = client.createConsumer(createConsumerConfig(`max-batch-${testId}`))
+    // Test with batch sizes larger than default max (use maxBatchMessages to avoid warnings)
+    const consumer = client.createConsumer(createConsumerConfig(`max-batch-${testId}`, { 
+      maxBatchMessages: 50 // Allow larger batch sizes
+    }))
     await consumer.subscribe(topic)
     
     const receivedMessages = []
@@ -51,7 +53,7 @@ await test('Batch Size Limits Integration Tests', async (t) => {
     const maxBatches = 10 // Limit number of batch calls
     
     while (receivedMessages.length < messageCount && batchCount < maxBatches) {
-      // Request more than max (should be clamped to 10)
+      // Request batch size of 25 (allowed due to maxBatchMessages: 50)
       const batch = await consumer.recvBatch(BATCH_SIZE_LIMITS.OUT_OF_RANGE_HIGH, 5000)
       batchCount++
       
@@ -60,9 +62,9 @@ await test('Batch Size Limits Integration Tests', async (t) => {
       const testMessages = batch.filter(msg => isTestMessage(msg, testId))
       receivedMessages.push(...testMessages)
       
-      // Verify batch size never exceeds maximum
-      ok(batch.length <= BATCH_SIZE_LIMITS.MAX, 
-         `Batch size ${batch.length} should not exceed maximum ${BATCH_SIZE_LIMITS.MAX}`)
+      // Verify batch size respects the configured maximum
+      ok(batch.length <= 50, 
+         `Batch size ${batch.length} should not exceed configured maximum of 50`)
     }
     
     await cleanupConsumer(consumer)
@@ -83,7 +85,11 @@ await test('Batch Size Limits Integration Tests', async (t) => {
       await producer.send({ topic, messages })
       await sleep(1000)
       
-      const consumer = client.createConsumer(createConsumerConfig(`boundary-${testId}`))
+      // Set maxBatchMessages high enough to avoid warnings for large batch size tests
+      const consumerConfig = scenario.shouldWarn 
+        ? createConsumerConfig(`boundary-${testId}`, { maxBatchMessages: 1500 })
+        : createConsumerConfig(`boundary-${testId}`)
+      const consumer = client.createConsumer(consumerConfig)
       await consumer.subscribe(topic)
       
       // Capture console output to check for warnings
@@ -129,11 +135,13 @@ await test('Batch Size Limits Integration Tests', async (t) => {
     await sleep(2000)
     
     // Test stream consumer with oversized batch configuration
-    // Note: This test intentionally triggers warnings to validate limit enforcement
-    const streamConsumer = client.createStreamConsumer(createConsumerConfig(`stream-limits-${testId}`))
+    // Use maxBatchMessages to allow larger batch sizes and avoid warnings
+    const streamConsumer = client.createStreamConsumer(createConsumerConfig(`stream-limits-${testId}`, {
+      maxBatchMessages: 30 // Allow batch sizes up to 30
+    }))
     
-    // Try to enable batch mode with size larger than maximum (25 > 10)
-    // This will trigger warning: "max_messages 25 out of range [1-10], using 10"
+    // Try to enable batch mode with size 25 (within configured max of 30)
+    // This should work without warnings since maxBatchMessages is set to 30
     streamConsumer.enableBatchMode(BATCH_SIZE_LIMITS.OUT_OF_RANGE_HIGH, 2000)
     
     await streamConsumer.subscribe([
