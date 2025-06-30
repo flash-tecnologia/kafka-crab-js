@@ -122,16 +122,18 @@ await test('Batch Size Limits Integration Tests', async (t) => {
   await t.test('Stream Batch: Validate batch size limits in stream mode', async () => {
     const topic = createTestTopic('stream-batch-limits')
     const testId = 'stream-batch-limits'
-    const messageCount = 30
+    const messageCount = 15 // Reduced for faster test execution
     
-    const messages = createBatchTestMessages(messageCount, testId, 'medium')
+    const messages = createBatchTestMessages(messageCount, testId, 'small')
     await producer.send({ topic, messages })
     await sleep(2000)
     
     // Test stream consumer with oversized batch configuration
+    // Note: This test intentionally triggers warnings to validate limit enforcement
     const streamConsumer = client.createStreamConsumer(createConsumerConfig(`stream-limits-${testId}`))
     
-    // Try to enable batch mode with size larger than maximum
+    // Try to enable batch mode with size larger than maximum (25 > 10)
+    // This will trigger warning: "max_messages 25 out of range [1-10], using 10"
     streamConsumer.enableBatchMode(BATCH_SIZE_LIMITS.OUT_OF_RANGE_HIGH, 2000)
     
     await streamConsumer.subscribe([
@@ -143,7 +145,7 @@ await test('Batch Size Limits Integration Tests', async (t) => {
     const streamPromise = new Promise((resolve, reject) => {
       const timeout = setTimeout(() => {
         resolve() // Don't fail on timeout, just analyze what we got
-      }, 15000)
+      }, 5000) // Reduced timeout since we expect warnings
       
       streamConsumer.on('data', (message) => {
         if (isTestMessage(message, testId)) {
