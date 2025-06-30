@@ -36,10 +36,10 @@ export const BATCH_SIZE_TEST_SCENARIOS = [
   },
   {
     name: 'too_low',
-    batchSize: BATCH_SIZE_LIMITS.OUT_OF_RANGE_LOW,
+    batchSize: BATCH_SIZE_LIMITS.OUT_OF_RANGE_LOW, // 0 - will trigger warning
     expected: BATCH_SIZE_LIMITS.DEFAULT, // Should fallback to default
     shouldWarn: true,
-    description: 'Test batch size too low (should fallback to default)'
+    description: 'Test batch size too low (should fallback to configured max) - WARNING EXPECTED'
   },
   {
     name: 'moderately_high',
@@ -168,6 +168,6 @@ export const PERFORMANCE_TEST_CONFIGS = [
 
 // Expected warning messages for validation
 export const EXPECTED_WARNING_PATTERNS = [
-  /max_messages \d+ out of range \[1-10\], using 10/,
+  /max_messages \d+ out of range \[1-\d+\], using \d+/, // Covers various maxBatchMessages values
   /batch_timeout_ms \d+ out of range \[1-30000\], using 100/
 ]

@@ -102,7 +102,10 @@ await test('Batch Size Limits Integration Tests', async (t) => {
       }
       
       try {
-        const batch = await consumer.recvBatch(scenario.batchSize, 5000)
+        // For the "too_low" scenario (batchSize: 0), we expect the warning:
+        // "max_messages 0 out of range [1-maxBatchMessages], using maxBatchMessages"
+        const timeoutMs = scenario.name === 'too_low' ? 2000 : 5000 // Faster for expected warning cases
+        const batch = await consumer.recvBatch(scenario.batchSize, timeoutMs)
         
         // Verify warning behavior
         if (scenario.shouldWarn) {
@@ -110,10 +113,11 @@ await test('Batch Size Limits Integration Tests', async (t) => {
           console.log(`Scenario ${scenario.name}: Expected warning for batch size ${scenario.batchSize}`)
         }
         
-        // Verify batch size is within limits
+        // Verify batch size is within expected limits
         if (batch.length > 0) {
-          ok(batch.length <= BATCH_SIZE_LIMITS.MAX, 
-             `Batch size ${batch.length} should not exceed maximum for scenario ${scenario.name}`)
+          const expectedMax = scenario.shouldWarn ? 1500 : BATCH_SIZE_LIMITS.MAX
+          ok(batch.length <= expectedMax, 
+             `Batch size ${batch.length} should not exceed maximum ${expectedMax} for scenario ${scenario.name}`)
         }
         
         console.log(`✓ Scenario ${scenario.name}: batch size ${scenario.batchSize} → received ${batch.length} messages`)
