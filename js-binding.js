@@ -67,7 +67,7 @@ const isMuslFromChildProcess = () => {
 function requireNative() {
   if (process.env.NAPI_RS_NATIVE_LIBRARY_PATH) {
     try {
-      nativeBinding = require(process.env.NAPI_RS_NATIVE_LIBRARY_PATH)
+      nativeBinding = require(process.env.NAPI_RS_NATIVE_LIBRARY_PATH);
     } catch (err) {
       loadErrors.push(err)
     }
@@ -83,6 +83,7 @@ function requireNative() {
       } catch (e) {
         loadErrors.push(e)
       }
+
     } else if (process.arch === 'arm') {
       try {
         return require('./kafka-crab-js.android-arm-eabi.node')
@@ -94,6 +95,7 @@ function requireNative() {
       } catch (e) {
         loadErrors.push(e)
       }
+
     } else {
       loadErrors.push(new Error(`Unsupported architecture on Android ${process.arch}`))
     }
@@ -109,6 +111,7 @@ function requireNative() {
       } catch (e) {
         loadErrors.push(e)
       }
+
     } else if (process.arch === 'ia32') {
       try {
         return require('./kafka-crab-js.win32-ia32-msvc.node')
@@ -120,6 +123,7 @@ function requireNative() {
       } catch (e) {
         loadErrors.push(e)
       }
+
     } else if (process.arch === 'arm64') {
       try {
         return require('./kafka-crab-js.win32-arm64-msvc.node')
@@ -131,20 +135,21 @@ function requireNative() {
       } catch (e) {
         loadErrors.push(e)
       }
+
     } else {
       loadErrors.push(new Error(`Unsupported architecture on Windows: ${process.arch}`))
     }
   } else if (process.platform === 'darwin') {
     try {
-      return require('./kafka-crab-js.darwin-universal.node')
-    } catch (e) {
-      loadErrors.push(e)
-    }
-    try {
-      return require('kafka-crab-js-darwin-universal')
-    } catch (e) {
-      loadErrors.push(e)
-    }
+        return require('./kafka-crab-js.darwin-universal.node')
+      } catch (e) {
+        loadErrors.push(e)
+      }
+      try {
+        return require('kafka-crab-js-darwin-universal')
+      } catch (e) {
+        loadErrors.push(e)
+      }
 
     if (process.arch === 'x64') {
       try {
@@ -157,6 +162,7 @@ function requireNative() {
       } catch (e) {
         loadErrors.push(e)
       }
+
     } else if (process.arch === 'arm64') {
       try {
         return require('./kafka-crab-js.darwin-arm64.node')
@@ -168,6 +174,7 @@ function requireNative() {
       } catch (e) {
         loadErrors.push(e)
       }
+
     } else {
       loadErrors.push(new Error(`Unsupported architecture on macOS: ${process.arch}`))
     }
@@ -183,6 +190,7 @@ function requireNative() {
       } catch (e) {
         loadErrors.push(e)
       }
+
     } else if (process.arch === 'arm64') {
       try {
         return require('./kafka-crab-js.freebsd-arm64.node')
@@ -194,6 +202,7 @@ function requireNative() {
       } catch (e) {
         loadErrors.push(e)
       }
+
     } else {
       loadErrors.push(new Error(`Unsupported architecture on FreeBSD: ${process.arch}`))
     }
@@ -201,98 +210,106 @@ function requireNative() {
     if (process.arch === 'x64') {
       if (isMusl()) {
         try {
-          return require('./kafka-crab-js.linux-x64-musl.node')
-        } catch (e) {
-          loadErrors.push(e)
-        }
-        try {
-          return require('kafka-crab-js-linux-x64-musl')
-        } catch (e) {
-          loadErrors.push(e)
-        }
+        return require('./kafka-crab-js.linux-x64-musl.node')
+      } catch (e) {
+        loadErrors.push(e)
+      }
+      try {
+        return require('kafka-crab-js-linux-x64-musl')
+      } catch (e) {
+        loadErrors.push(e)
+      }
+
       } else {
         try {
-          return require('./kafka-crab-js.linux-x64-gnu.node')
-        } catch (e) {
-          loadErrors.push(e)
-        }
-        try {
-          return require('kafka-crab-js-linux-x64-gnu')
-        } catch (e) {
-          loadErrors.push(e)
-        }
+        return require('./kafka-crab-js.linux-x64-gnu.node')
+      } catch (e) {
+        loadErrors.push(e)
+      }
+      try {
+        return require('kafka-crab-js-linux-x64-gnu')
+      } catch (e) {
+        loadErrors.push(e)
+      }
+
       }
     } else if (process.arch === 'arm64') {
       if (isMusl()) {
         try {
-          return require('./kafka-crab-js.linux-arm64-musl.node')
-        } catch (e) {
-          loadErrors.push(e)
-        }
-        try {
-          return require('kafka-crab-js-linux-arm64-musl')
-        } catch (e) {
-          loadErrors.push(e)
-        }
+        return require('./kafka-crab-js.linux-arm64-musl.node')
+      } catch (e) {
+        loadErrors.push(e)
+      }
+      try {
+        return require('kafka-crab-js-linux-arm64-musl')
+      } catch (e) {
+        loadErrors.push(e)
+      }
+
       } else {
         try {
-          return require('./kafka-crab-js.linux-arm64-gnu.node')
-        } catch (e) {
-          loadErrors.push(e)
-        }
-        try {
-          return require('kafka-crab-js-linux-arm64-gnu')
-        } catch (e) {
-          loadErrors.push(e)
-        }
+        return require('./kafka-crab-js.linux-arm64-gnu.node')
+      } catch (e) {
+        loadErrors.push(e)
+      }
+      try {
+        return require('kafka-crab-js-linux-arm64-gnu')
+      } catch (e) {
+        loadErrors.push(e)
+      }
+
       }
     } else if (process.arch === 'arm') {
       if (isMusl()) {
         try {
-          return require('./kafka-crab-js.linux-arm-musleabihf.node')
-        } catch (e) {
-          loadErrors.push(e)
-        }
-        try {
-          return require('kafka-crab-js-linux-arm-musleabihf')
-        } catch (e) {
-          loadErrors.push(e)
-        }
+        return require('./kafka-crab-js.linux-arm-musleabihf.node')
+      } catch (e) {
+        loadErrors.push(e)
+      }
+      try {
+        return require('kafka-crab-js-linux-arm-musleabihf')
+      } catch (e) {
+        loadErrors.push(e)
+      }
+
       } else {
         try {
-          return require('./kafka-crab-js.linux-arm-gnueabihf.node')
-        } catch (e) {
-          loadErrors.push(e)
-        }
-        try {
-          return require('kafka-crab-js-linux-arm-gnueabihf')
-        } catch (e) {
-          loadErrors.push(e)
-        }
+        return require('./kafka-crab-js.linux-arm-gnueabihf.node')
+      } catch (e) {
+        loadErrors.push(e)
+      }
+      try {
+        return require('kafka-crab-js-linux-arm-gnueabihf')
+      } catch (e) {
+        loadErrors.push(e)
+      }
+
       }
     } else if (process.arch === 'riscv64') {
       if (isMusl()) {
         try {
-          return require('./kafka-crab-js.linux-riscv64-musl.node')
-        } catch (e) {
-          loadErrors.push(e)
-        }
-        try {
-          return require('kafka-crab-js-linux-riscv64-musl')
-        } catch (e) {
-          loadErrors.push(e)
-        }
+        return require('./kafka-crab-js.linux-riscv64-musl.node')
+      } catch (e) {
+        loadErrors.push(e)
+      }
+      try {
+        return require('kafka-crab-js-linux-riscv64-musl')
+      } catch (e) {
+        loadErrors.push(e)
+      }
+
       } else {
         try {
-          return require('./kafka-crab-js.linux-riscv64-gnu.node')
-        } catch (e) {
-          loadErrors.push(e)
-        }
-        try {
-          return require('kafka-crab-js-linux-riscv64-gnu')
-        } catch (e) {
-          loadErrors.push(e)
-        }
+        return require('./kafka-crab-js.linux-riscv64-gnu.node')
+      } catch (e) {
+        loadErrors.push(e)
+      }
+      try {
+        return require('kafka-crab-js-linux-riscv64-gnu')
+      } catch (e) {
+        loadErrors.push(e)
+      }
+
       }
     } else if (process.arch === 'ppc64') {
       try {
@@ -305,6 +322,7 @@ function requireNative() {
       } catch (e) {
         loadErrors.push(e)
       }
+
     } else if (process.arch === 's390x') {
       try {
         return require('./kafka-crab-js.linux-s390x-gnu.node')
@@ -316,6 +334,7 @@ function requireNative() {
       } catch (e) {
         loadErrors.push(e)
       }
+
     } else {
       loadErrors.push(new Error(`Unsupported architecture on Linux: ${process.arch}`))
     }
@@ -351,21 +370,13 @@ if (!nativeBinding) {
       `Cannot find native binding. ` +
         `npm has a bug related to optional dependencies (https://github.com/npm/cli/issues/4828). ` +
         'Please try `npm i` again after removing both package-lock.json and node_modules directory.',
-      { cause: loadErrors },
+      { cause: loadErrors }
     )
   }
   throw new Error(`Failed to load native binding`)
 }
 
-const {
-  KafkaClientConfig,
-  KafkaConsumer,
-  KafkaProducer,
-  CommitMode,
-  KafkaEventName,
-  PartitionPosition,
-  SecurityProtocol,
-} = nativeBinding
+const { KafkaClientConfig, KafkaConsumer, KafkaProducer, CommitMode, KafkaEventName, PartitionPosition, SecurityProtocol } = nativeBinding
 export { KafkaClientConfig }
 export { KafkaConsumer }
 export { KafkaProducer }
