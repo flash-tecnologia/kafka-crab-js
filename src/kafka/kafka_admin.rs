@@ -24,16 +24,17 @@ pub struct KafkaAdmin<'a> {
 }
 
 impl<'a> KafkaAdmin<'a> {
-  pub fn new(client_config: &'a ClientConfig, fetch_metadata_timeout: Option<Duration>) -> Self {
-    let admin_client: AdminClient<DefaultClientContext> = client_config
-      .create()
-      .expect("admin client creation failed");
+  pub fn new(
+    client_config: &'a ClientConfig,
+    fetch_metadata_timeout: Option<Duration>,
+  ) -> Result<Self, KafkaError> {
+    let admin_client: AdminClient<DefaultClientContext> = client_config.create()?;
 
-    KafkaAdmin {
+    Ok(KafkaAdmin {
       client_config,
       admin_client,
       fetch_metadata_timeout: fetch_metadata_timeout.unwrap_or(DEFAULT_FETCH_METADATA_TIMEOUT),
-    }
+    })
   }
 
   async fn fetch_config_resource(&self) -> Result<HashMap<String, String>, KafkaError> {
@@ -120,10 +121,9 @@ trait ParsedOrDefaultValue {
 
 impl ParsedOrDefaultValue for Option<&String> {
   fn get_parsed_or_default_value<T: FromStr>(self, default_value: T) -> T {
-    if let Some(ret) = self {
-      ret.parse().unwrap_or(default_value)
-    } else {
-      default_value
+    match self {
+      Some(ret) => ret.parse().unwrap_or(default_value),
+      None => default_value,
     }
   }
 }

@@ -16,7 +16,7 @@ impl<E: std::fmt::Debug> IntoNapiError for E {
   fn into_napi_error(self, context: &str) -> Error {
     Error::new(
       Status::GenericFailure,
-      format!("Error while {}: {:?}", context, self),
+      format!("Error while {context}: {self:?}"),
     )
   }
 }
@@ -37,8 +37,7 @@ pub fn kakfa_headers_to_hashmap_buffer(
   match headers {
     Some(value) => value
       .iter()
-      .filter(|it| it.value.is_some())
-      .map(|it| (it.key.to_owned(), it.value.unwrap().into()))
+      .filter_map(|it| it.value.map(|v| (it.key.to_owned(), v.into())))
       .collect::<HashMap<String, Buffer>>(),
     _ => HashMap::new(),
   }

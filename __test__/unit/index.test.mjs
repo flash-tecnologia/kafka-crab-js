@@ -1,6 +1,6 @@
 import { equal, ok, throws } from 'node:assert/strict'
 import test from 'node:test'
-import { KafkaClient } from '../dist/index.js'
+import { KafkaClient } from '../../dist/index.js'
 
 // Configuration options
 const testConfig = {

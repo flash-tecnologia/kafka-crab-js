@@ -1,6 +1,6 @@
 {
   "name": "kafka-crab-js",
-  "version": "1.4.1",
+  "version": "1.5.0",
   "type": "module",
   "engines": {
     "node": ">=20"
@@ -32,30 +32,13 @@
   "license": "MIT",
   "keywords": [
     "kafka",
-    "napi-rs",
+    "rust",
+    "napi",
     "librdkafka",
-    "typescript",
-    "rust"
+    "streaming",
+    "producer",
+    "consumer"
   ],
-  "author": "inaiat@gmail.com",
-  "homepage": "https://github.com/inaiat/kafka-crab-js.git",
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/inaiat/kafka-crab-js.git"
-  },
-  "devDependencies": {
-    "@faker-js/faker": "^9.7.0",
-    "@napi-rs/cli": "^3.0.0-alpha.78",
-    "@types/copyfiles": "^2.4.4",
-    "@types/node": "^22.15.12",
-    "copyfiles": "^2.4.1",
-    "dprint": "^0.49.1",
-    "esbuild": "^0.25.4",
-    "nanoid": "^5.1",
-    "oxlint": "^0.16.9",
-    "rimraf": "^6.0.1",
-    "typescript": "^5.8.3"
-  },
   "scripts": {
     "artifacts": "napi artifacts",
     "prebuild": "rimraf dist",
@@ -63,11 +46,32 @@
     "postbuild": "tsc --emitDeclarationOnly --declaration --outDir dist",
     "build:debug": "napi build --platform",
     "prepublishOnly": "napi prepublish -t npm",
-    "test": "node --test __test__/*.test.*",
-    "test:integration": "node --test __test__/integration/*.test.*",
+    "test": "node --test __test__/unit/*.test.*",
+    "test:integration": "__test__/integration/run-tests.sh",
+    "test:integration:manual": "node --test __test__/integration/*.test.*",
+    "test:integration:producer": "cd __test__/integration && node producer.test.mjs",
+    "test:integration:consumer": "cd __test__/integration && node consumer.test.mjs",
+    "test:integration:stream": "cd __test__/integration && node consumer-stream.test.mjs",
+    "test:integration:batch": "cd __test__/integration && node consumer-stream-batch.test.mjs",
+    "test:integration:limits": "cd __test__/integration && node batch-size-limits.test.mjs",
+    "kafka:up": "cd __test__/integration && (docker-compose up -d || podman-compose up -d)",
+    "kafka:down": "cd __test__/integration && (docker-compose down -v || podman-compose down -v)",
+    "kafka:logs": "cd __test__/integration && (docker-compose logs -f kafka || podman-compose logs -f kafka)",
     "version": "napi version",
     "fmt": "dprint fmt",
     "lint": "oxlint ."
   },
-  "packageManager": "pnpm@10.10.0"
+  "packageManager": "pnpm@10.12.1",
+  "dependencies": {
+    "@napi-rs/cli": "^3.0.0-alpha.91"
+  },
+  "devDependencies": {
+    "@types/node": "^24",
+    "esbuild": "^0.25.4",
+    "nanoid": "^5.0.0",
+    "oxlint": "^1.4",
+    "dprint": "^0.50",
+    "typescript": "^5.5.4",
+    "rimraf": "^6.0.1"
+  }
 }

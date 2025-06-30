@@ -1,4 +1,9 @@
-import { ConsumerConfiguration, KafkaClientConfig, KafkaConfiguration, ProducerConfiguration } from '../js-binding.js'
+import {
+  type ConsumerConfiguration,
+  KafkaClientConfig,
+  type KafkaConfiguration,
+  type ProducerConfiguration,
+} from '../js-binding.js'
 
 import { KafkaStreamReadable } from './kafka-stream-readable.js'
 
