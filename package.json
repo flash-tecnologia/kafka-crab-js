@@ -63,10 +63,11 @@
   },
   "packageManager": "pnpm@10.12.1",
   "dependencies": {
-    "@napi-rs/cli": "^2.18.4"
+    "@napi-rs/cli": "3.0.0-alpha.91"
   },
   "devDependencies": {
     "@types/node": "^24",
+    "esbuild": "^0.25.4",
     "nanoid": "^5.0.0",
     "oxlint": "^1.4",
     "dprint": "^0.50",
