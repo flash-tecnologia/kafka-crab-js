@@ -72,7 +72,7 @@ await test('Consumer Stream Integration Tests', async (t) => {
 
   await t.test('Stream Consumer: Handle stream errors', async () => {
     const streamConsumer = client.createStreamConsumer(createConsumerConfig('error-test'))
-    
+
     let errorReceived = false
 
     streamConsumer.on('error', (error) => {

@@ -1,13 +1,13 @@
 import { equal, ok } from 'node:assert/strict'
-import test from 'node:test'
 import { Buffer } from 'node:buffer'
+import test from 'node:test'
 import { KafkaClient } from '../../dist/index.js'
-import { 
-  setupTestEnvironment, 
-  createProducerConfig, 
+import {
   cleanupProducer,
+  createProducerConfig,
   createTestMessages,
-  createTestTopic
+  createTestTopic,
+  setupTestEnvironment,
 } from './utils.mjs'
 
 await test('Producer Integration Tests', async (t) => {
@@ -31,18 +31,18 @@ await test('Producer Integration Tests', async (t) => {
     const message = {
       key: Buffer.from(`single-key-${testId}`),
       payload: Buffer.from(JSON.stringify({ testId, type: 'single' })),
-      headers: { 'message-type': Buffer.from('single') }
+      headers: { 'message-type': Buffer.from('single') },
     }
 
     const results = await producer.send({
       topic,
-      messages: [message]
+      messages: [message],
     })
 
     ok(Array.isArray(results), 'Send should return array of results')
     equal(results.length, 1, 'Should have one result')
-    ok(typeof results[0] === 'number' || (results[0] && typeof results[0].offset === 'number'), 
-       'Result should contain offset')
+    ok(typeof results[0] === 'number' || (results[0] && typeof results[0].offset === 'number'),
+      'Result should contain offset')
   })
 
   await t.test('Producer: Send batch of messages', async () => {
@@ -50,15 +50,15 @@ await test('Producer Integration Tests', async (t) => {
 
     const results = await producer.send({
       topic,
-      messages
+      messages,
     })
 
     ok(Array.isArray(results), 'Send should return array of results')
     equal(results.length, messages.length, 'Should have results for all messages')
-    
+
     for (const result of results) {
-      ok(typeof result === 'number' || (result && typeof result.offset === 'number'), 
-         'Each result should contain offset')
+      ok(typeof result === 'number' || (result && typeof result.offset === 'number'),
+        'Each result should contain offset')
     }
   })
 
@@ -66,21 +66,21 @@ await test('Producer Integration Tests', async (t) => {
     const topic = createTestTopic('headers')
     const complexMessage = {
       key: Buffer.from('complex-key'),
-      payload: Buffer.from(JSON.stringify({ 
+      payload: Buffer.from(JSON.stringify({
         data: 'complex payload',
-        nested: { value: 42 }
+        nested: { value: 42 },
       })),
       headers: {
         'content-type': Buffer.from('application/json'),
         'correlation-id': Buffer.from('12345-67890'),
         'timestamp': Buffer.from(Date.now().toString()),
-        'binary-data': Buffer.from([0x01, 0x02, 0x03, 0x04])
-      }
+        'binary-data': Buffer.from([0x01, 0x02, 0x03, 0x04]),
+      },
     }
 
     const results = await producer.send({
       topic,
-      messages: [complexMessage]
+      messages: [complexMessage],
     })
 
     ok(Array.isArray(results), 'Send should return array of results')
@@ -95,7 +95,7 @@ await test('Producer Integration Tests', async (t) => {
 
     const [results1, results2] = await Promise.all([
       producer.send({ topic: topic1, messages: messages1 }),
-      producer.send({ topic: topic2, messages: messages2 })
+      producer.send({ topic: topic2, messages: messages2 }),
     ])
 
     ok(Array.isArray(results1), 'First send should return array')
@@ -110,7 +110,7 @@ await test('Producer Integration Tests', async (t) => {
 
     const results = await producer.send({
       topic,
-      messages: largeMessages
+      messages: largeMessages,
     })
 
     ok(Array.isArray(results), 'Send should return array of results')
@@ -120,12 +120,12 @@ await test('Producer Integration Tests', async (t) => {
   await t.test('Producer: Send message with no key', async () => {
     const topic = createTestTopic('no-key')
     const message = {
-      payload: Buffer.from(JSON.stringify({ type: 'no-key-message' }))
+      payload: Buffer.from(JSON.stringify({ type: 'no-key-message' })),
     }
 
     const results = await producer.send({
       topic,
-      messages: [message]
+      messages: [message],
     })
 
     ok(Array.isArray(results), 'Send should return array of results')
@@ -136,12 +136,12 @@ await test('Producer Integration Tests', async (t) => {
     const topic = createTestTopic('empty-payload')
     const message = {
       key: Buffer.from('empty-key'),
-      payload: Buffer.alloc(0)
+      payload: Buffer.alloc(0),
     }
 
     const results = await producer.send({
       topic,
-      messages: [message]
+      messages: [message],
     })
 
     ok(Array.isArray(results), 'Send should return array of results')
