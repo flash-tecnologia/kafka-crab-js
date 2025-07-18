@@ -1,4 +1,4 @@
-use std::{time::Duration, vec};
+use std::{sync::Arc, time::Duration, vec};
 use tokio::sync::watch::{self};
 
 use napi::{
@@ -66,7 +66,7 @@ fn validate_seek_timeout(timeout: Option<i64>) -> i64 {
   validate_timeout(timeout, DEFAULT_SEEK_TIMEOUT, MAX_SEEK_TIMEOUT, 0)
 }
 
-/// Validates timeout for batch operations  
+/// Validates timeout for batch operations
 #[inline]
 fn validate_batch_timeout(timeout: Option<i64>) -> i64 {
   validate_timeout(timeout, DEFAULT_BATCH_TIMEOUT, MAX_BATCH_TIMEOUT, 1)
@@ -134,7 +134,7 @@ impl KafkaConsumer {
     async_runtime,
     ts_args_type = "callback: (error: Error | undefined, event: KafkaEvent) => void"
   )]
-  pub fn on_events(&self, callback: ThreadsafeFunction<KafkaEvent>) -> Result<()> {
+  pub fn on_events(&self, callback: Arc<ThreadsafeFunction<KafkaEvent>>) -> Result<()> {
     let mut rx = self.stream_consumer.context().event_channel.1.clone();
     let mut disconnect_signal = self.disconnect_signal.1.clone();
 

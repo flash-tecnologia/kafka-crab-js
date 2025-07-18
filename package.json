@@ -69,15 +69,15 @@
   },
   "packageManager": "pnpm@10.12.1",
   "dependencies": {
-    "@napi-rs/cli": "^3.0.0-alpha.91"
+    "@napi-rs/cli": "^3.0.0"
   },
   "devDependencies": {
-    "@types/node": "^24",
-    "esbuild": "^0.25.4",
-    "nanoid": "^5.0.0",
-    "oxlint": "^1.4",
-    "dprint": "^0.50",
-    "typescript": "^5.5.4",
-    "rimraf": "^6.0.1"
+    "@types/node": "^24.0.14",
+    "dprint": "^0.50.1",
+    "esbuild": "^0.25.6",
+    "nanoid": "^5.1.5",
+    "oxlint": "^1.7.0",
+    "rimraf": "^6.0.1",
+    "typescript": "^5.8.3"
   }
 }
