@@ -69,15 +69,15 @@
   },
   "packageManager": "pnpm@10.12.1",
   "dependencies": {
-    "@napi-rs/cli": "^3.0.3"
+    "@napi-rs/cli": "^3.0.4"
   },
   "devDependencies": {
-    "@types/node": "^24.1.0",
+    "@types/node": "^24.2.0",
     "dprint": "^0.50.1",
     "esbuild": "^0.25.8",
     "nanoid": "^5.1.5",
-    "oxlint": "^1.8.0",
+    "oxlint": "^1.9.0",
     "rimraf": "^6.0.1",
-    "typescript": "^5.8.3"
+    "typescript": "^5.9.2"
   }
 }
