@@ -19,6 +19,7 @@
     "restriction": "error"
   },
   "rules": {
+    "explicit-module-boundary-types": "off",
     "unicorn/no-null": "off",
     "explicit-function-return-type": "off",
     "no-rest-spread-properties": "off",
