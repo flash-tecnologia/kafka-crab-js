@@ -78,7 +78,7 @@ type DisconnectSignal = (watch::Sender<()>, watch::Receiver<()>);
 pub struct KafkaConsumer {
   client_config: ClientConfig,
   consumer_config: ConsumerConfiguration,
-  stream_consumer: StreamConsumer<KafkaCrabContext>,
+  stream_consumer: Arc<StreamConsumer<KafkaCrabContext>>,
   fetch_metadata_timeout: Duration,
   disconnect_signal: DisconnectSignal,
   max_batch_messages: u32,
@@ -105,7 +105,7 @@ impl KafkaConsumer {
     Ok(KafkaConsumer {
       client_config: client_config.clone(),
       consumer_config: consumer_configuration.clone(),
-      stream_consumer,
+      stream_consumer: Arc::new(stream_consumer),
       fetch_metadata_timeout: Duration::from_millis(
         consumer_configuration.fetch_metadata_timeout.map_or_else(
           || DEFAULT_FETCH_METADATA_TIMEOUT.as_millis() as u64,
@@ -407,26 +407,36 @@ impl KafkaConsumer {
   }
 
   #[napi]
-  pub fn commit(
+  pub async fn commit(
     &self,
     topic: String,
     partition: i32,
     offset: i64,
     commit: CommitMode,
   ) -> Result<()> {
-    let mut tpl = RdTopicPartitionList::new();
-    tpl
-      .add_partition_offset(&topic, partition, Offset::Offset(offset))
-      .map_err(|e| e.into_napi_error("Error while adding partition offset"))?;
-    let commit_mode = match commit {
-      CommitMode::Sync => RdKfafkaCommitMode::Sync,
-      CommitMode::Async => RdKfafkaCommitMode::Async,
-    };
-    self
-      .stream_consumer
-      .commit(&tpl, commit_mode)
-      .map_err(|e| e.into_napi_error("Error while committing"))?;
-    debug!("Commiting done. Tpl: {:?}", &tpl);
+    let consumer = self.stream_consumer.clone();
+
+    tokio::task::spawn_blocking(move || {
+      let mut tpl = RdTopicPartitionList::new();
+      tpl
+        .add_partition_offset(&topic, partition, Offset::Offset(offset))
+        .map_err(|e| e.into_napi_error("Error while adding partition offset"))?;
+      let commit_mode = match commit {
+        CommitMode::Sync => RdKfafkaCommitMode::Sync,
+        CommitMode::Async => RdKfafkaCommitMode::Async,
+      };
+
+      let result = consumer
+        .commit(&tpl, commit_mode)
+        .map_err(|e| e.into_napi_error("Error while committing"));
+
+      debug!("Commiting done. Tpl: {:?}", &tpl);
+
+      result
+    })
+    .await
+    .map_err(|e| Error::new(Status::GenericFailure, format!("Join error: {}", e)))??;
+
     Ok(())
   }
 }
