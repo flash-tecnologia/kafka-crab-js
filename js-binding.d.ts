@@ -28,7 +28,7 @@ export declare class KafkaConsumer {
    * @returns Array of messages (may be fewer than max_messages)
    */
   recvBatch(maxMessages: number, timeoutMs: number): Promise<Array<Message>>
-  commit(topic: string, partition: number, offset: number, commit: CommitMode): void
+  commit(topic: string, partition: number, offset: number, commit: CommitMode): Promise<void>
 }
 
 export declare class KafkaProducer {
