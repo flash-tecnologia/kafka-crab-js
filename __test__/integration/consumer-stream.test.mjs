@@ -275,7 +275,7 @@ await test('Consumer Stream Integration Tests', async (t) => {
       streamConsumer.seek(firstMessage.topic, firstMessage.partition, { Beginning: null })
 
       // Test commit functionality
-      streamConsumer.commit(firstMessage.topic, firstMessage.partition, firstMessage.offset, 'Sync')
+      await streamConsumer.commit(firstMessage.topic, firstMessage.partition, firstMessage.offset, 'Sync')
     } catch (error) {
       console.warn('Stream methods test warning:', error.message)
       // Don't fail the test for this timing issue

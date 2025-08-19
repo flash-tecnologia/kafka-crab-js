@@ -78,7 +78,7 @@ type DisconnectSignal = (watch::Sender<()>, watch::Receiver<()>);
 pub struct KafkaConsumer {
   client_config: ClientConfig,
   consumer_config: ConsumerConfiguration,
-  stream_consumer: StreamConsumer<KafkaCrabContext>,
+  stream_consumer: Arc<StreamConsumer<KafkaCrabContext>>,
   fetch_metadata_timeout: Duration,
   disconnect_signal: DisconnectSignal,
   max_batch_messages: u32,
@@ -95,7 +95,7 @@ impl KafkaConsumer {
     let ConsumerConfiguration { configuration, .. } = consumer_configuration;
     let stream_consumer =
       create_stream_consumer(client_config, consumer_configuration, configuration.clone())
-        .map_err(|e| e.into_napi_error("error while getting assignment"))?;
+        .map_err(|e| e.into_napi_error("Failed to create stream consumer"))?;
 
     let max_batch_messages = consumer_configuration
       .max_batch_messages
@@ -105,7 +105,7 @@ impl KafkaConsumer {
     Ok(KafkaConsumer {
       client_config: client_config.clone(),
       consumer_config: consumer_configuration.clone(),
-      stream_consumer,
+      stream_consumer: Arc::new(stream_consumer),
       fetch_metadata_timeout: Duration::from_millis(
         consumer_configuration.fetch_metadata_timeout.map_or_else(
           || DEFAULT_FETCH_METADATA_TIMEOUT.as_millis() as u64,
@@ -126,7 +126,7 @@ impl KafkaConsumer {
   pub fn get_subscription(&self) -> Result<Vec<TopicPartition>> {
     match self.stream_consumer.subscription() {
       Ok(v) => Ok(convert_tpl_to_array_of_topic_partition(&v)),
-      Err(e) => Err(e.into_napi_error("Error while getting subscription")),
+      Err(e) => Err(e.into_napi_error("Failed to get subscription")),
     }
   }
 
@@ -188,10 +188,10 @@ impl KafkaConsumer {
       self.fetch_metadata_timeout,
     )
     .await
-    .map_err(|e| e.into_napi_error("error while creating topics"))?;
+    .map_err(|e| e.into_napi_error("Failed to create topics"))?;
 
     try_subscribe(&self.stream_consumer, &topics_name)
-      .map_err(|e| e.into_napi_error("error while subscribing"))?;
+      .map_err(|e| e.into_napi_error("Failed to subscribe to topics"))?;
 
     // Process topic configurations and handle errors properly
     for item in topics.iter() {
@@ -206,7 +206,7 @@ impl KafkaConsumer {
           &item.topic,
           self.fetch_metadata_timeout,
         )
-        .map_err(|e| e.into_napi_error("error while setting offset"))?;
+        .map_err(|e| e.into_napi_error("Failed to set partition offset"))?;
       } else if let Some(partition_offset) = item.partition_offset.clone() {
         debug!(
           "Subscribing to topic: {} with partition offsets: {:?}",
@@ -219,7 +219,7 @@ impl KafkaConsumer {
           &self.stream_consumer,
           self.fetch_metadata_timeout,
         )
-        .map_err(|e| e.into_napi_error("error while assigning offset"))?;
+        .map_err(|e| e.into_napi_error("Failed to assign partition offset"))?;
       };
     }
 
@@ -230,7 +230,7 @@ impl KafkaConsumer {
     let partitions = self
       .stream_consumer
       .assignment()
-      .map_err(|e| e.into_napi_error("getting partitions"))?;
+      .map_err(|e| e.into_napi_error("Failed to get partition assignment"))?;
     Ok(partitions)
   }
 
@@ -239,7 +239,7 @@ impl KafkaConsumer {
     self
       .stream_consumer
       .pause(&self.get_partitions()?)
-      .map_err(|e| e.into_napi_error("error while pausing"))?;
+      .map_err(|e| e.into_napi_error("Failed to pause consumer"))?;
     Ok(())
   }
 
@@ -248,7 +248,7 @@ impl KafkaConsumer {
     self
       .stream_consumer
       .resume(&self.get_partitions()?)
-      .map_err(|e| e.into_napi_error("error while resuming"))?;
+      .map_err(|e| e.into_napi_error("Failed to resume consumer"))?;
     Ok(())
   }
 
@@ -300,7 +300,7 @@ impl KafkaConsumer {
         offset,
         Duration::from_millis(validate_seek_timeout(timeout) as u64),
       )
-      .map_err(|e| e.into_napi_error("Error while seeking"))?;
+      .map_err(|e| e.into_napi_error("Failed to seek to offset"))?;
     Ok(())
   }
 
@@ -309,7 +309,7 @@ impl KafkaConsumer {
     let assignment = self
       .stream_consumer
       .assignment()
-      .map_err(|e| e.into_napi_error("error while getting assignment"))?;
+      .map_err(|e| e.into_napi_error("Failed to get partition assignment"))?;
     Ok(convert_tpl_to_array_of_topic_partition(&assignment))
   }
 
@@ -319,7 +319,7 @@ impl KafkaConsumer {
     select! {
         message = self.stream_consumer.recv() => {
             message
-                .map_err(|e| e.into_napi_error("Error while receiving from stream consumer"))
+                .map_err(|e| e.into_napi_error("Failed to receive message from consumer"))
                 .map(|message| Some(create_message(&message, message.payload().unwrap_or(&[]))))
         }
         _ = rx.changed() => {
@@ -374,7 +374,7 @@ impl KafkaConsumer {
       let recv_result = tokio::time::timeout(remaining_timeout, async {
         select! {
           message = self.stream_consumer.recv() => {
-            message.map_err(|e| e.into_napi_error("Error while receiving from stream consumer"))
+            message.map_err(|e| e.into_napi_error("Failed to receive message from consumer"))
           }
           _ = rx.changed() => {
             debug!("Disconnect signal received during batch receive");
@@ -407,26 +407,36 @@ impl KafkaConsumer {
   }
 
   #[napi]
-  pub fn commit(
+  pub async fn commit(
     &self,
     topic: String,
     partition: i32,
     offset: i64,
     commit: CommitMode,
   ) -> Result<()> {
-    let mut tpl = RdTopicPartitionList::new();
-    tpl
-      .add_partition_offset(&topic, partition, Offset::Offset(offset))
-      .map_err(|e| e.into_napi_error("Error while adding partition offset"))?;
-    let commit_mode = match commit {
-      CommitMode::Sync => RdKfafkaCommitMode::Sync,
-      CommitMode::Async => RdKfafkaCommitMode::Async,
-    };
-    self
-      .stream_consumer
-      .commit(&tpl, commit_mode)
-      .map_err(|e| e.into_napi_error("Error while committing"))?;
-    debug!("Commiting done. Tpl: {:?}", &tpl);
+    let consumer = self.stream_consumer.clone();
+
+    tokio::task::spawn_blocking(move || {
+      let mut tpl = RdTopicPartitionList::new();
+      tpl
+        .add_partition_offset(&topic, partition, Offset::Offset(offset))
+        .map_err(|e| e.into_napi_error("Failed to add partition offset"))?;
+      let commit_mode = match commit {
+        CommitMode::Sync => RdKfafkaCommitMode::Sync,
+        CommitMode::Async => RdKfafkaCommitMode::Async,
+      };
+
+      let result = consumer
+        .commit(&tpl, commit_mode)
+        .map_err(|e| e.into_napi_error("Failed to commit offset"));
+
+      debug!("Committing done. Tpl: {:?}", &tpl);
+
+      result
+    })
+    .await
+    .map_err(|e| e.into_napi_error("Failed to join commit task"))??;
+
     Ok(())
   }
 }

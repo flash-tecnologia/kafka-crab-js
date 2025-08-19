@@ -14,10 +14,7 @@ pub trait IntoNapiError {
 
 impl<E: std::fmt::Debug> IntoNapiError for E {
   fn into_napi_error(self, context: &str) -> Error {
-    Error::new(
-      Status::GenericFailure,
-      format!("Error while {context}: {self:?}"),
-    )
+    Error::new(Status::GenericFailure, format!("{context}: {self:?}"))
   }
 }
 

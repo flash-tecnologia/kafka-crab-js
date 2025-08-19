@@ -196,7 +196,7 @@ await test('Consumer Integration Tests', async (t) => {
     try {
       const message = await consumer.recv()
       if (message && isTestMessage(message, testId)) {
-        consumer.commit(message.topic, message.partition, message.offset, 'Sync')
+        await consumer.commit(message.topic, message.partition, message.offset, 'Sync')
       }
       ok(true, 'Manual commit functionality works')
     } catch (error) {

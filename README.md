@@ -10,29 +10,35 @@ A lightweight, flexible, and reliable Kafka client for JavaScript/TypeScript. It
 
 ---
 
-## What's New in Version 1.4.0
+## What's New in Version 1.8.0
+
+### 🚨 Breaking Changes:
+1. **Async Consumer Commit**:
+   - **BREAKING**: The `consumer.commit()` method is now async and must be awaited
+   - **Before**: `consumer.commit(topic, partition, offset, 'Sync')`
+   - **After**: `await consumer.commit(topic, partition, offset, 'Sync')`
+   - This change improves performance by using `spawn_blocking` for non-blocking operations
 
 ### Major Updates:
-1. **Enums Replaced by Unions**:
-   - Removed enums such as `KafkaEventName`, `PartitionPosition`, `CommitMode`, and `SecurityProtocol`.
-   - These enums were replaced with union types for better flexibility and usability.
+2. **Enhanced Manual Commit Testing**:
+   - Added comprehensive integration tests for manual commit functionality
+   - Tests now use PostRebalance events for proper timing instead of arbitrary timeouts
+   - Covers both sync and async commit modes with offset verification
+   - Tests offset persistence across consumer restarts and batch processing scenarios
 
-2. **Improved TypeScript Definitions**:
-   - Enhanced TypeScript definitions for better clarity and usability:
-     - Changes in `KafkaClientConfig`, `KafkaConsumer`, and `KafkaProducer`.
-
-3. **CI/CD Enhancements**:
-   - Updated GitHub Actions workflow:
-     - Added matrix builds for better coverage across platforms (e.g., `x86_64`, `aarch64` on Linux and macOS).
+3. **Improved Error Messages**:
+   - Standardized all error messages to use consistent "Failed to [action]" format
+   - Enhanced error clarity and specificity throughout the codebase
+   - Fixed grammar and spelling issues in error messages
 
 4. **Updated Dependencies**:
-   - Upgraded dependencies to their latest versions for improved performance and security.
+   - Upgraded all dependencies to their latest versions for improved performance and security
+   - Updated TypeScript bindings and CommonJS exports
+   - Synchronized pnpm-lock.yaml with new dependency versions
 
-5. **New Tests and Examples**:
-   - Added new integration tests and examples for Kafka to ensure reliability.
-
-6. **Enhanced Documentation**:
-   - Comprehensive API reference and usage examples added to the `docs/wiki` directory.
+5. **Arc-based Consumer Architecture**:
+   - Improved internal architecture using `Arc<StreamConsumer>` for better memory management
+   - Enhanced thread safety for commit operations
 
 ---
 
@@ -92,12 +98,16 @@ async function run() {
   await consumer.subscribe([{ topic: 'foo' }]);
 
   const message = await consumer.recv();
-  const { payload, partition, offset } = message;
+  const { payload, partition, offset, topic } = message;
   console.log({
+    topic,
     partition,
     offset,
     value: payload.toString()
   });
+
+  // Manual commit (v1.8.0+: now requires await)
+  await consumer.commit(topic, partition, offset + 1, 'Sync');
 
   consumer.unsubscribe();
 
