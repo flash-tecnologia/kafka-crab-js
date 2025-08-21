@@ -26,7 +26,7 @@ await test('Consumer Manual Commit Integration Tests', async (t) => {
 
   await t.test('Consumer: Manual commit sync with offset verification', async () => {
     const { topic, messages, testId } = await setupTestEnvironment()
-    
+
     // Send messages first
     await producer.send({ topic, messages })
     await sleep(1000)
@@ -48,7 +48,7 @@ await test('Consumer Manual Commit Integration Tests', async (t) => {
         console.log('Timeout waiting for PostRebalance event')
         resolve()
       }, 10000) // 10 second timeout
-      
+
       consumer.onEvents((err, event) => {
         if (err) {
           console.error('Event error:', err)
@@ -56,7 +56,7 @@ await test('Consumer Manual Commit Integration Tests', async (t) => {
         }
         events.push(event)
         console.log(`Received event: ${event.name}`)
-        
+
         // Wait for PostRebalance to ensure partition assignment
         if (event.name === 'PostRebalance') {
           isRebalanced = true
@@ -70,11 +70,11 @@ await test('Consumer Manual Commit Integration Tests', async (t) => {
 
     // Wait for PostRebalance event before attempting commits
     await rebalancePromise
-    
+
     if (!isRebalanced) {
       console.warn('PostRebalance event not received, proceeding anyway')
     }
-    
+
     // Verify assignment
     try {
       const assignment = consumer.assignment()
@@ -95,10 +95,12 @@ await test('Consumer Manual Commit Integration Tests', async (t) => {
 
       if (message && isTestMessage(message, testId)) {
         receivedMessages.push(message)
-        
+
         // Manual commit with sync mode
         try {
-          console.log(`Committing sync: topic=${message.topic}, partition=${message.partition}, offset=${message.offset}`)
+          console.log(
+            `Committing sync: topic=${message.topic}, partition=${message.partition}, offset=${message.offset}`,
+          )
           await consumer.commit(message.topic, message.partition, message.offset + 1, 'Sync')
           console.log(`Successfully committed offset ${message.offset + 1} for partition ${message.partition}`)
         } catch (error) {
@@ -117,7 +119,7 @@ await test('Consumer Manual Commit Integration Tests', async (t) => {
     // Verify results
     equal(receivedMessages.length, messages.length, 'Should receive all sent messages')
     ok(receivedMessages.every(msg => msg.offset !== undefined), 'All messages should have offsets')
-    
+
     // Verify that events were captured (if any)
     console.log(`Captured ${events.length} events during sync commit test`)
     events.forEach(event => console.log(`Event: ${event.name}`))
@@ -125,7 +127,7 @@ await test('Consumer Manual Commit Integration Tests', async (t) => {
 
   await t.test('Consumer: Manual commit async with offset verification', async () => {
     const { topic, messages, testId } = await setupTestEnvironment()
-    
+
     // Send messages first
     await producer.send({ topic, messages })
     await sleep(1000)
@@ -147,7 +149,7 @@ await test('Consumer Manual Commit Integration Tests', async (t) => {
         console.log('Timeout waiting for PostRebalance event')
         resolve()
       }, 10000) // 10 second timeout
-      
+
       consumer.onEvents((err, event) => {
         if (err) {
           console.error('Event error:', err)
@@ -155,7 +157,7 @@ await test('Consumer Manual Commit Integration Tests', async (t) => {
         }
         events.push(event)
         console.log(`Received event: ${event.name}`)
-        
+
         // Wait for PostRebalance to ensure partition assignment
         if (event.name === 'PostRebalance') {
           isRebalanced = true
@@ -169,11 +171,11 @@ await test('Consumer Manual Commit Integration Tests', async (t) => {
 
     // Wait for PostRebalance event before attempting commits
     await rebalancePromise
-    
+
     if (!isRebalanced) {
       console.warn('PostRebalance event not received, proceeding anyway')
     }
-    
+
     // Verify assignment
     try {
       const assignment = consumer.assignment()
@@ -194,10 +196,12 @@ await test('Consumer Manual Commit Integration Tests', async (t) => {
 
       if (message && isTestMessage(message, testId)) {
         receivedMessages.push(message)
-        
+
         // Manual commit with async mode
         try {
-          console.log(`Committing async: topic=${message.topic}, partition=${message.partition}, offset=${message.offset}`)
+          console.log(
+            `Committing async: topic=${message.topic}, partition=${message.partition}, offset=${message.offset}`,
+          )
           await consumer.commit(message.topic, message.partition, message.offset + 1, 'Async')
           console.log(`Successfully committed offset ${message.offset + 1} for partition ${message.partition}`)
         } catch (error) {
@@ -216,7 +220,7 @@ await test('Consumer Manual Commit Integration Tests', async (t) => {
     // Verify results
     equal(receivedMessages.length, messages.length, 'Should receive all sent messages')
     ok(receivedMessages.every(msg => msg.offset !== undefined), 'All messages should have offsets')
-    
+
     // Verify that events were captured (if any)
     console.log(`Captured ${events.length} events during async commit test`)
     events.forEach(event => console.log(`Event: ${event.name}`))
@@ -225,7 +229,7 @@ await test('Consumer Manual Commit Integration Tests', async (t) => {
   await t.test('Consumer: Verify committed offsets persist across consumer restarts', async () => {
     const { topic, messages, testId } = await setupTestEnvironment()
     const groupId = `offset-persistence-${testId}`
-    
+
     // Send messages first
     await producer.send({ topic, messages })
     await sleep(1000)
@@ -245,14 +249,14 @@ await test('Consumer Manual Commit Integration Tests', async (t) => {
         console.log('Timeout waiting for PostRebalance event')
         resolve()
       }, 10000)
-      
+
       consumer1.onEvents((err, event) => {
         if (err) {
           console.error('Event error:', err)
           return
         }
         console.log(`Consumer1 received event: ${event.name}`)
-        
+
         if (event.name === 'PostRebalance') {
           isRebalanced = true
           clearTimeout(timeout)
@@ -263,7 +267,7 @@ await test('Consumer Manual Commit Integration Tests', async (t) => {
 
     await consumer1.subscribe([{ topic, allOffsets: { position: 'Beginning' } }])
     await rebalancePromise
-    
+
     if (!isRebalanced) {
       console.warn('PostRebalance event not received for consumer1, proceeding anyway')
     }
@@ -271,7 +275,7 @@ await test('Consumer Manual Commit Integration Tests', async (t) => {
     // Consume first half of messages and commit
     const halfCount = Math.floor(messages.length / 2)
     let lastCommittedOffset = -1
-    
+
     for (let i = 0; i < halfCount; i++) {
       const message = await consumer1.recv()
       if (message && isTestMessage(message, testId)) {
@@ -307,10 +311,10 @@ await test('Consumer Manual Commit Integration Tests', async (t) => {
       if (message && isTestMessage(message, testId)) {
         console.log(`Consumer2 received message at offset ${message.offset}`)
         remainingMessages.push(message)
-        
+
         // Verify this message's offset is >= lastCommittedOffset
-        ok(message.offset >= lastCommittedOffset, 
-           `Message offset ${message.offset} should be >= last committed offset ${lastCommittedOffset}`)
+        ok(message.offset >= lastCommittedOffset,
+          `Message offset ${message.offset} should be >= last committed offset ${lastCommittedOffset}`)
       }
 
       if (!message) {
@@ -328,7 +332,7 @@ await test('Consumer Manual Commit Integration Tests', async (t) => {
 
   await t.test('Consumer: Batch processing with manual commit', async () => {
     const { topic, messages, testId } = await setupTestEnvironment()
-    
+
     // Send more messages for batch testing
     const batchMessages = messages.concat(messages) // Double the messages
     await producer.send({ topic, messages: batchMessages })
@@ -348,14 +352,14 @@ await test('Consumer Manual Commit Integration Tests', async (t) => {
         console.log('Timeout waiting for PostRebalance event')
         resolve()
       }, 10000)
-      
+
       consumer.onEvents((err, event) => {
         if (err) {
           console.error('Event error:', err)
           return
         }
         console.log(`Batch consumer received event: ${event.name}`)
-        
+
         if (event.name === 'PostRebalance') {
           isRebalanced = true
           clearTimeout(timeout)
@@ -366,7 +370,7 @@ await test('Consumer Manual Commit Integration Tests', async (t) => {
 
     await consumer.subscribe([{ topic, allOffsets: { position: 'Beginning' } }])
     await rebalancePromise
-    
+
     if (!isRebalanced) {
       console.warn('PostRebalance event not received for batch consumer, proceeding anyway')
     }
@@ -379,7 +383,7 @@ await test('Consumer Manual Commit Integration Tests', async (t) => {
 
     while (totalReceived < batchMessages.length) {
       const batch = await consumer.recvBatch(batchSize, timeoutMs)
-      
+
       if (batch.length === 0) {
         break
       }
@@ -387,21 +391,19 @@ await test('Consumer Manual Commit Integration Tests', async (t) => {
       const testMessagesBatch = batch.filter(msg => isTestMessage(msg, testId))
       if (testMessagesBatch.length > 0) {
         totalReceived += testMessagesBatch.length
-        
+
         // Find the highest offset in this batch
-        const highestOffsetMessage = testMessagesBatch.reduce((max, msg) => 
-          msg.offset > max.offset ? msg : max
-        )
+        const highestOffsetMessage = testMessagesBatch.reduce((max, msg) => msg.offset > max.offset ? msg : max)
 
         // Commit the highest offset + 1
         try {
           const commitOffset = highestOffsetMessage.offset + 1
           console.log(`Committing batch with highest offset ${commitOffset}`)
           await consumer.commit(
-            highestOffsetMessage.topic, 
-            highestOffsetMessage.partition, 
-            commitOffset, 
-            'Sync'
+            highestOffsetMessage.topic,
+            highestOffsetMessage.partition,
+            commitOffset,
+            'Sync',
           )
           lastCommittedOffset = commitOffset
           console.log(`Successfully committed batch offset ${commitOffset}`)
