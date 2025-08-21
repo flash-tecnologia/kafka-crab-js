@@ -88,12 +88,12 @@ export class KafkaStreamReadable extends Readable {
     await this.kafkaConsumer.subscribe(topics)
   }
 
-  seek(topic: string, partition: number, offsetModel: OffsetModel, timeout?: number | undefined) {
+  seek(topic: string, partition: number, offsetModel: OffsetModel, timeout?: number) {
     this.kafkaConsumer.seek(topic, partition, offsetModel, timeout)
   }
 
-  commit(topic: string, partition: number, offset: number, commit: CommitMode) {
-    this.kafkaConsumer.commit(topic, partition, offset, commit)
+  async commit(topic: string, partition: number, offset: number, commitMode: CommitMode) {
+    return this.kafkaConsumer.commit(topic, partition, offset, commitMode)
   }
 
   /**

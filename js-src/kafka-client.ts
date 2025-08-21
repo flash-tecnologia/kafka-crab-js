@@ -25,7 +25,7 @@ export class KafkaClient {
    * @param {ProducerConfiguration} [producerConfiguration] - Optional producer configuration
    * @returns {KafkaProducer} A KafkaProducer instance
    */
-  createProducer(producerConfiguration: ProducerConfiguration) {
+  createProducer(producerConfiguration?: ProducerConfiguration) {
     if (producerConfiguration) {
       return this.kafkaClientConfig.createProducer(producerConfiguration)
     }

@@ -426,6 +426,11 @@ impl KafkaConsumer {
         CommitMode::Async => RdKfafkaCommitMode::Async,
       };
 
+      debug!(
+        "Committing offset for topic: {}, partition: {}, offset: {} mode {:?}",
+        &topic, partition, offset, commit_mode
+      );
+
       let result = consumer
         .commit(&tpl, commit_mode)
         .map_err(|e| e.into_napi_error("Failed to commit offset"));

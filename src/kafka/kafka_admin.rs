@@ -8,7 +8,7 @@ use rdkafka::{
   error::KafkaError,
   types::RDKafkaErrorCode,
 };
-use tracing::{debug, trace};
+use tracing::{debug, error, trace, warn};
 
 use std::{collections::HashMap, str::FromStr, time::Duration};
 
@@ -44,41 +44,123 @@ impl<'a> KafkaAdmin<'a> {
 
     for broker in metadata.brokers() {
       debug!(
-        "Metadata borker id:{}  Host: {}:{}",
+        "Metadata broker id:{}  Host: {}:{}",
         broker.id(),
         broker.host(),
         broker.port()
       );
     }
 
-    let config_resource = self
+    // Try different approaches to get broker config
+    debug!(
+      "Trying to fetch broker config with orig_broker_id: {}",
+      metadata.orig_broker_id()
+    );
+
+    // First, try with the original broker ID
+    let mut config_resource = self
       .admin_client
       .describe_configs(
         &[ResourceSpecifier::Broker(metadata.orig_broker_id())],
         &AdminOptions::new(),
       )
-      .await?;
+      .await;
 
-    Ok(extract_config_resource(config_resource))
+    // If that fails, try with the first broker from metadata
+    if config_resource.is_err() {
+      if let Some(first_broker) = metadata.brokers().first() {
+        warn!(
+          "Failed to get config with orig_broker_id, trying with first broker id: {}",
+          first_broker.id()
+        );
+        config_resource = self
+          .admin_client
+          .describe_configs(
+            &[ResourceSpecifier::Broker(first_broker.id())],
+            &AdminOptions::new(),
+          )
+          .await;
+      }
+    }
+
+    // If still fails, try getting default broker config (broker id -1 or 0)
+    if config_resource.is_err() {
+      warn!("Failed to get config with first broker, trying with broker id 1");
+      config_resource = self
+        .admin_client
+        .describe_configs(&[ResourceSpecifier::Broker(1)], &AdminOptions::new())
+        .await;
+    }
+
+    match config_resource {
+      Ok(config) => {
+        debug!("Successfully fetched broker config");
+        Ok(extract_config_resource(config))
+      }
+      Err(e) => {
+        error!("Failed to fetch broker config after all attempts: {}", e);
+        warn!("Falling back to empty config - will use defaults");
+        Ok(HashMap::new()) // Return empty config, will use defaults
+      }
+    }
   }
 
   pub async fn create_topic(&self, topics: &Vec<String>) -> anyhow::Result<()> {
-    let broker_properties = self.fetch_config_resource().await?.clone();
+    debug!("Starting topic creation for topics: {:?}", topics);
+
+    // Fetch broker config
+    let broker_properties = self
+      .fetch_config_resource()
+      .await
+      .map_err(anyhow::Error::new)?;
     trace!("Broker properties: {:?}", broker_properties);
+
+    // Fetch metadata separately for broker count
+    let consumer: BaseConsumer = self.client_config.create().map_err(anyhow::Error::new)?;
+    let metadata = consumer
+      .fetch_metadata(None, self.fetch_metadata_timeout)
+      .map_err(anyhow::Error::new)?;
+
+    // Try multiple possible property names for num.partitions
+    let num_partitions = broker_properties
+      .get("num.partitions")
+      .or_else(|| broker_properties.get("kafka.num.partitions"))
+      .or_else(|| broker_properties.get("default.partitions"))
+      .get_parsed_or_default_value(DEFAULT_NUM_PARTITIONS);
+
+    // Get configured replication factor
+    let configured_replication = broker_properties
+      .get("default.replication.factor")
+      .or_else(|| broker_properties.get("kafka.default.replication.factor"))
+      .or_else(|| broker_properties.get("replication.factor"))
+      .get_parsed_or_default_value(DEFAULT_REPLICATION);
+
+    // Safety check: limit by available brokers
+    let available_brokers = metadata.brokers().len() as i32;
+    let replication_factor = std::cmp::min(configured_replication, available_brokers);
+
+    debug!(
+      "Configured replication: {}, Available brokers: {}, Final replication: {}",
+      configured_replication, available_brokers, replication_factor
+    );
+    debug!(
+      "Using num_partitions: {} (from broker config or default)",
+      num_partitions
+    );
 
     let new_topics: Vec<NewTopic> = topics
       .iter()
-      .map(|topic| NewTopic {
-        name: topic,
-        num_partitions: broker_properties
-          .get("num.partitions")
-          .get_parsed_or_default_value(DEFAULT_NUM_PARTITIONS),
-        replication: TopicReplication::Fixed(
-          broker_properties
-            .get("default.replication.factor")
-            .get_parsed_or_default_value(DEFAULT_REPLICATION),
-        ),
-        config: vec![],
+      .map(|topic| {
+        debug!(
+          "Creating topic '{}' with {} partitions, replication {}",
+          topic, num_partitions, replication_factor
+        );
+        NewTopic {
+          name: topic,
+          num_partitions,
+          replication: TopicReplication::Fixed(replication_factor),
+          config: vec![],
+        }
       })
       .collect();
 
@@ -111,7 +193,6 @@ fn extract_config_resource(
       }
     }
   }
-
   properties
 }
 
