@@ -28,7 +28,7 @@ pub fn hashmap_to_kafka_headers(map: &HashMap<String, Buffer>) -> OwnedHeaders {
   })
 }
 
-pub fn kakfa_headers_to_hashmap_buffer(
+pub fn kafka_headers_to_hashmap_buffer(
   headers: Option<&BorrowedHeaders>,
 ) -> HashMap<String, Buffer> {
   match headers {
@@ -42,7 +42,7 @@ pub fn kakfa_headers_to_hashmap_buffer(
 
 pub fn create_message(message: &BorrowedMessage<'_>, payload: &[u8]) -> Message {
   let key: Option<Buffer> = message.key().map(|bytes| bytes.into());
-  let headers = Some(kakfa_headers_to_hashmap_buffer(message.headers()));
+  let headers = Some(kafka_headers_to_hashmap_buffer(message.headers()));
   let payload_js = Message::new(
     payload.into(),
     key,

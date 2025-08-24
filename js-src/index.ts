@@ -11,7 +11,6 @@ export type {
   ProducerConfiguration,
   ProducerRecord,
   RecordMetadata,
-  RetryStrategy,
   TopicPartition,
   TopicPartitionConfig,
 } from '../js-binding.js'

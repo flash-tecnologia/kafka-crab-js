@@ -68,11 +68,9 @@ pub struct KafkaCrabError {
  * default values are set
  * auto_flush: true
  * queue_timeout: 5000
- * thrown_on_error: false
  */
 pub struct ProducerConfiguration {
   pub queue_timeout: Option<i64>,
-  pub thrown_on_error: Option<bool>,
   pub auto_flush: Option<bool>,
   pub configuration: Option<HashMap<String, String>>,
 }

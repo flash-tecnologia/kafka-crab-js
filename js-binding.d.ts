@@ -110,7 +110,6 @@ export type PartitionPosition =  'Beginning'|
 
 export interface ProducerConfiguration {
   queueTimeout?: number
-  thrownOnError?: boolean
   autoFlush?: boolean
   configuration?: Record<string, string>
 }
@@ -125,15 +124,6 @@ export interface RecordMetadata {
   partition: number
   offset: number
   error?: KafkaCrabError
-}
-
-export interface RetryStrategy {
-  retries: number
-  retryTopic?: string
-  dqlTopic?: string
-  pauseConsumerDuration?: number
-  offset?: OffsetModel
-  configuration?: Record<string, string>
 }
 
 export type SecurityProtocol =  'Plaintext'|

@@ -2,17 +2,6 @@ use std::{collections::HashMap, time::Duration};
 
 pub const DEFAULT_FETCH_METADATA_TIMEOUT: Duration = Duration::from_millis(2000);
 
-#[napi(object)]
-#[derive(Clone, Debug)]
-pub struct RetryStrategy {
-  pub retries: i32,
-  pub retry_topic: Option<String>,
-  pub dql_topic: Option<String>,
-  pub pause_consumer_duration: Option<i64>,
-  pub offset: Option<OffsetModel>,
-  pub configuration: Option<HashMap<String, String>>,
-}
-
 #[napi(string_enum)]
 #[derive(Debug, PartialEq)]
 pub enum CommitMode {

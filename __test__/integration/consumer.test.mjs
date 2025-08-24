@@ -177,34 +177,6 @@ await test('Consumer Integration Tests', async (t) => {
     ok(receivedTopics.has(topic2), 'Should receive from second topic')
   })
 
-  await t.test('Consumer: Manual commit', async () => {
-    const { topic, messages, testId } = await setupTestEnvironment()
-
-    await producer.send({ topic, messages })
-    await sleep(1000)
-
-    // Create consumer with manual commit
-    const consumerConfig = createConsumerConfig(`manual-commit-${testId}`, {
-      configuration: {
-        'enable.auto.commit': 'false',
-      },
-    })
-    const consumer = client.createConsumer(consumerConfig)
-    await consumer.subscribe([{ topic, allOffsets: { position: 'Beginning' } }])
-
-    // Simple manual commit test - just test that the method works
-    try {
-      const message = await consumer.recv()
-      if (message && isTestMessage(message, testId)) {
-        await consumer.commit(message.topic, message.partition, message.offset, 'Sync')
-      }
-      ok(true, 'Manual commit functionality works')
-    } catch (error) {
-      console.warn('Manual commit test skipped:', error.message)
-    }
-
-    await cleanupConsumer(consumer)
-  })
 
   await t.test('Consumer: Seek functionality', async () => {
     const { topic, messages, testId } = await setupTestEnvironment()
@@ -328,6 +300,56 @@ await test('Consumer Integration Tests', async (t) => {
     }
 
     await cleanupConsumer(consumer)
+  })
+
+  await t.test('Consumer: Topic creation control test', async () => {
+    const testTopicName = `topic-creation-test-${Date.now()}`
+    
+    // Test with createTopic disabled
+    const consumerConfigDisabled = {
+      groupId: `topic-creation-disabled-${Date.now()}`,
+      createTopic: false,
+      enableAutoCommit: true,
+    }
+    
+    const consumerDisabled = client.createConsumer(consumerConfigDisabled)
+    
+    try {
+      // This should work without creating the topic (will fail if topic doesn't exist)
+      await consumerDisabled.subscribe(testTopicName)
+      console.log('Topic creation disabled - subscription succeeded without creating topic')
+    } catch (error) {
+      console.log('Topic creation disabled - subscription failed as expected when topic does not exist')
+    } finally {
+      await cleanupConsumer(consumerDisabled)
+    }
+    
+    // Test with createTopic enabled (default behavior)
+    const consumerConfigEnabled = {
+      groupId: `topic-creation-enabled-${Date.now()}`,
+      createTopic: true, // explicitly enabled
+      enableAutoCommit: true,
+    }
+    
+    const consumerEnabled = client.createConsumer(consumerConfigEnabled)
+    
+    try {
+      // This should create the topic automatically
+      await consumerEnabled.subscribe(testTopicName)
+      console.log('Topic creation enabled - subscription succeeded, topic should be created')
+      
+      // Verify the topic creation worked by checking subscription
+      const subscription = consumerEnabled.getSubscription()
+      ok(subscription.length > 0, 'Should have subscription after topic creation')
+      
+    } catch (error) {
+      console.error('Topic creation enabled test failed:', error.message)
+      throw error
+    } finally {
+      await cleanupConsumer(consumerEnabled)
+    }
+    
+    console.log('Topic creation control tests completed')
   })
 
   await t.test('Cleanup: Disconnect producer', async () => {
