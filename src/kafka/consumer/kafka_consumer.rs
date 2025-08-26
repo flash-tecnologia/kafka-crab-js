@@ -92,13 +92,17 @@ impl KafkaConsumer {
   ) -> Result<Self> {
     let client_config: &ClientConfig = kafka_client.get_client_config();
 
-    let ConsumerConfiguration { configuration, .. } = consumer_configuration;
+    let ConsumerConfiguration {
+      configuration,
+      fetch_metadata_timeout,
+      max_batch_messages,
+      ..
+    } = consumer_configuration;
     let stream_consumer =
       create_stream_consumer(client_config, consumer_configuration, configuration.clone())
         .map_err(|e| e.into_napi_error("Failed to create stream consumer"))?;
 
-    let max_batch_messages = consumer_configuration
-      .max_batch_messages
+    let max_batch_messages = max_batch_messages
       .unwrap_or(DEFAULT_MAX_BATCH_MESSAGES)
       .clamp(1, MAX_BATCH_MESSAGES);
 
@@ -106,12 +110,10 @@ impl KafkaConsumer {
       client_config: client_config.clone(),
       consumer_config: consumer_configuration.clone(),
       stream_consumer: Arc::new(stream_consumer),
-      fetch_metadata_timeout: Duration::from_millis(
-        consumer_configuration.fetch_metadata_timeout.map_or_else(
-          || DEFAULT_FETCH_METADATA_TIMEOUT.as_millis() as u64,
-          |t| t as u64,
-        ),
-      ),
+      fetch_metadata_timeout: Duration::from_millis(fetch_metadata_timeout.map_or_else(
+        || DEFAULT_FETCH_METADATA_TIMEOUT.as_millis() as u64,
+        |t| t as u64,
+      )),
       disconnect_signal: watch::channel(()),
       max_batch_messages,
     })
@@ -181,14 +183,22 @@ impl KafkaConsumer {
       .map(|x| x.topic.clone())
       .collect::<Vec<String>>();
 
-    debug!("Creating topics if not exists: {:?}", &topics_name);
-    try_create_topic(
-      &topics_name,
-      &self.client_config,
-      self.fetch_metadata_timeout,
-    )
-    .await
-    .map_err(|e| e.into_napi_error("Failed to create topics"))?;
+    // Only create topics if create_topic is not explicitly disabled
+    if self.consumer_config.create_topic.unwrap_or(true) {
+      debug!("Creating topics if not exists: {:?}", &topics_name);
+      try_create_topic(
+        &topics_name,
+        &self.client_config,
+        self.fetch_metadata_timeout,
+      )
+      .await
+      .map_err(|e| e.into_napi_error("Failed to create topics"))?;
+    } else {
+      debug!(
+        "Topic creation disabled, skipping topic creation for: {:?}",
+        &topics_name
+      );
+    }
 
     try_subscribe(&self.stream_consumer, &topics_name)
       .map_err(|e| e.into_napi_error("Failed to subscribe to topics"))?;

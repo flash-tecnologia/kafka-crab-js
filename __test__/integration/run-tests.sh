@@ -124,6 +124,7 @@ TEST_FILES=(
     "producer.test.mjs"
     "consumer.test.mjs" 
     "consumer-stream.test.mjs"
+    "consumer-manual-commit.test.mjs"
     "consumer-stream-batch.test.mjs"
     "batch-size-limits.test.mjs"
 )
