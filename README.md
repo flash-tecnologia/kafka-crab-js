@@ -10,35 +10,36 @@ A lightweight, flexible, and reliable Kafka client for JavaScript/TypeScript. It
 
 ---
 
-## What's New in Version 1.8.0
+## What's New in Version 1.9.0
 
-### 🚨 Breaking Changes:
-1. **Async Consumer Commit**:
+### Major Updates:
+1. **Consumer Topic Creation Control**:
+   - Added fine-grained control over consumer topic creation behavior
+   - Enhanced consistency in topic management and cleanup processes
+   - Improved handling of topic creation inconsistencies during consumer operations
+
+2. **Enhanced Manual Commit Testing**:
+   - Consolidated manual commit tests for better reliability and coverage
+   - Added comprehensive integration tests with PostRebalance event handling
+   - Tests now verify offset persistence across consumer restarts and batch processing
+   - Improved timing and synchronization in integration test scenarios
+
+3. **Optional Producer Configuration**:
+   - Producer configuration is now optional with sensible defaults
+   - Enhanced commit logging for better debugging and monitoring
+   - Improved flexibility in producer setup and configuration
+
+4. **Build System Improvements**:
+   - Added Cargo.lock tracking for reproducible builds across environments
+   - Enhanced dependency management and version consistency
+   - Updated TypeScript bindings and CommonJS exports
+
+### Previous Version (1.8.0) Breaking Changes:
+5. **Async Consumer Commit**:
    - **BREAKING**: The `consumer.commit()` method is now async and must be awaited
    - **Before**: `consumer.commit(topic, partition, offset, 'Sync')`
    - **After**: `await consumer.commit(topic, partition, offset, 'Sync')`
    - This change improves performance by using `spawn_blocking` for non-blocking operations
-
-### Major Updates:
-2. **Enhanced Manual Commit Testing**:
-   - Added comprehensive integration tests for manual commit functionality
-   - Tests now use PostRebalance events for proper timing instead of arbitrary timeouts
-   - Covers both sync and async commit modes with offset verification
-   - Tests offset persistence across consumer restarts and batch processing scenarios
-
-3. **Improved Error Messages**:
-   - Standardized all error messages to use consistent "Failed to [action]" format
-   - Enhanced error clarity and specificity throughout the codebase
-   - Fixed grammar and spelling issues in error messages
-
-4. **Updated Dependencies**:
-   - Upgraded all dependencies to their latest versions for improved performance and security
-   - Updated TypeScript bindings and CommonJS exports
-   - Synchronized pnpm-lock.yaml with new dependency versions
-
-5. **Arc-based Consumer Architecture**:
-   - Improved internal architecture using `Arc<StreamConsumer>` for better memory management
-   - Enhanced thread safety for commit operations
 
 ---
 

@@ -177,7 +177,6 @@ await test('Consumer Integration Tests', async (t) => {
     ok(receivedTopics.has(topic2), 'Should receive from second topic')
   })
 
-
   await t.test('Consumer: Seek functionality', async () => {
     const { topic, messages, testId } = await setupTestEnvironment()
 
@@ -304,16 +303,16 @@ await test('Consumer Integration Tests', async (t) => {
 
   await t.test('Consumer: Topic creation control test', async () => {
     const testTopicName = `topic-creation-test-${Date.now()}`
-    
+
     // Test with createTopic disabled
     const consumerConfigDisabled = {
       groupId: `topic-creation-disabled-${Date.now()}`,
       createTopic: false,
       enableAutoCommit: true,
     }
-    
+
     const consumerDisabled = client.createConsumer(consumerConfigDisabled)
-    
+
     try {
       // This should work without creating the topic (will fail if topic doesn't exist)
       await consumerDisabled.subscribe(testTopicName)
@@ -323,32 +322,31 @@ await test('Consumer Integration Tests', async (t) => {
     } finally {
       await cleanupConsumer(consumerDisabled)
     }
-    
+
     // Test with createTopic enabled (default behavior)
     const consumerConfigEnabled = {
       groupId: `topic-creation-enabled-${Date.now()}`,
       createTopic: true, // explicitly enabled
       enableAutoCommit: true,
     }
-    
+
     const consumerEnabled = client.createConsumer(consumerConfigEnabled)
-    
+
     try {
       // This should create the topic automatically
       await consumerEnabled.subscribe(testTopicName)
       console.log('Topic creation enabled - subscription succeeded, topic should be created')
-      
+
       // Verify the topic creation worked by checking subscription
       const subscription = consumerEnabled.getSubscription()
       ok(subscription.length > 0, 'Should have subscription after topic creation')
-      
     } catch (error) {
       console.error('Topic creation enabled test failed:', error.message)
       throw error
     } finally {
       await cleanupConsumer(consumerEnabled)
     }
-    
+
     console.log('Topic creation control tests completed')
   })
 

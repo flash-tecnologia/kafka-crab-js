@@ -411,7 +411,6 @@ await test('Consumer Manual Commit Integration Tests', async (t) => {
     }
   })
 
-
   await t.test('Consumer: Batch processing with manual commit', async () => {
     const { topic, messages, testId } = await setupTestEnvironment()
 
