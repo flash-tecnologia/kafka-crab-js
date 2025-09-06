@@ -40,8 +40,7 @@ pub const DEFAULT_SEEK_TIMEOUT: i64 = 1500;
 const MAX_SEEK_TIMEOUT: i64 = 300000; // 5 minutes max
 const DEFAULT_BATCH_TIMEOUT: i64 = 1500;
 const MAX_BATCH_TIMEOUT: i64 = 30000; // 30 seconds max for batch operations
-const DEFAULT_MAX_BATCH_MESSAGES: u32 = 10;
-const MAX_BATCH_MESSAGES: u32 = 1000;
+const DEFAULT_MAX_BATCH_MESSAGES: u32 = 1000;
 
 /// Validates and bounds-checks timeout values
 #[inline]
@@ -103,8 +102,7 @@ impl KafkaConsumer {
         .map_err(|e| e.into_napi_error("Failed to create stream consumer"))?;
 
     let max_batch_messages = max_batch_messages
-      .unwrap_or(DEFAULT_MAX_BATCH_MESSAGES)
-      .clamp(1, MAX_BATCH_MESSAGES);
+      .unwrap_or(DEFAULT_MAX_BATCH_MESSAGES);
 
     Ok(KafkaConsumer {
       client_config: client_config.clone(),
@@ -170,6 +168,8 @@ impl KafkaConsumer {
           topic: config,
           all_offsets: None,
           partition_offset: None,
+          create_topic: None,
+          num_partitions: None,
         }]
       }
       Either::B(config) => {
@@ -178,27 +178,31 @@ impl KafkaConsumer {
       }
     };
 
+    // Process topic creation per topic with individual configurations
+    for topic_config in &topics {
+      let create_topic = topic_config.create_topic.unwrap_or(true);
+      if create_topic {
+        debug!("Creating topic if not exists: {:?}", &topic_config.topic);
+        try_create_topic(
+          &vec![topic_config.topic.clone()],
+          &self.client_config,
+          self.fetch_metadata_timeout,
+          topic_config.num_partitions,
+        )
+        .await
+        .map_err(|e| e.into_napi_error("Failed to create topics"))?;
+      } else {
+        debug!(
+          "Topic creation disabled for topic: {:?}",
+          &topic_config.topic
+        );
+      }
+    }
+
     let topics_name = topics
       .iter()
       .map(|x| x.topic.clone())
       .collect::<Vec<String>>();
-
-    // Only create topics if create_topic is not explicitly disabled
-    if self.consumer_config.create_topic.unwrap_or(true) {
-      debug!("Creating topics if not exists: {:?}", &topics_name);
-      try_create_topic(
-        &topics_name,
-        &self.client_config,
-        self.fetch_metadata_timeout,
-      )
-      .await
-      .map_err(|e| e.into_napi_error("Failed to create topics"))?;
-    } else {
-      debug!(
-        "Topic creation disabled, skipping topic creation for: {:?}",
-        &topics_name
-      );
-    }
 
     try_subscribe(&self.stream_consumer, &topics_name)
       .map_err(|e| e.into_napi_error("Failed to subscribe to topics"))?;
@@ -349,10 +353,13 @@ impl KafkaConsumer {
   /// @returns Array of messages (may be fewer than max_messages)
   #[napi]
   pub async fn recv_batch(&self, max_messages: u32, timeout_ms: i64) -> Result<Vec<Message>> {
-    // Validate input parameters against configured maximum
-    let max_messages = if max_messages == 0 || max_messages > self.max_batch_messages {
+    // Validate input parameters against absolute maximum (allows enableBatchMode to override config)
+    let max_messages = if max_messages == 0 {
+      warn!("max_messages cannot be 0, using 1");
+      1
+    } else if max_messages > self.max_batch_messages {
       warn!(
-        "max_messages {} out of range [1-{}], using {}",
+        "max_messages {} exceeds maximum limit {}, using {}",
         max_messages, self.max_batch_messages, self.max_batch_messages
       );
       self.max_batch_messages

@@ -44,7 +44,7 @@ export interface ConsumerConfiguration {
   groupId: string
   createTopic?: boolean
   enableAutoCommit?: boolean
-  configuration?: Record<string, string>
+  configuration?: Record<string, any>
   fetchMetadataTimeout?: number
   maxBatchMessages?: number
 }
@@ -53,7 +53,7 @@ export interface KafkaConfiguration {
   brokers: string
   clientId: string
   securityProtocol?: SecurityProtocol
-  configuration?: Record<string, string>
+  configuration?: Record<string, any>
   logLevel?: string
   brokerAddressFamily?: string
 }
@@ -111,7 +111,7 @@ export type PartitionPosition =  'Beginning'|
 export interface ProducerConfiguration {
   queueTimeout?: number
   autoFlush?: boolean
-  configuration?: Record<string, string>
+  configuration?: Record<string, any>
 }
 
 export interface ProducerRecord {
@@ -140,4 +140,6 @@ export interface TopicPartitionConfig {
   topic: string
   allOffsets?: OffsetModel
   partitionOffset?: Array<PartitionOffset>
+  createTopic?: boolean
+  numPartitions?: number
 }

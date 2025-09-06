@@ -13,7 +13,7 @@ const MAX_BATCH_TIMEOUT_MS = 30_000
  */
 export class KafkaStreamReadable extends Readable {
   private useBatchMode = false
-  private batchSize = 10
+  private batchSize = DEFAULT_BATCH_SIZE
   private batchTimeoutMs: number = DEFAULT_BATCH_TIMEOUT_MS
 
   /**

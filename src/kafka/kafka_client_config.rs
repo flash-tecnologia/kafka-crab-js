@@ -5,6 +5,8 @@ use rdkafka::config::{ClientConfig, RDKafkaLogLevel};
 
 use tracing::{trace, warn, Level};
 
+use crate::kafka::kafka_util::convert_config_values_to_strings;
+
 use super::{
   consumer::{kafka_consumer::KafkaConsumer, model::ConsumerConfiguration},
   producer::{kafka_producer::KafkaProducer, model::ProducerConfiguration},
@@ -66,7 +68,7 @@ pub struct KafkaConfiguration {
   pub brokers: String,
   pub client_id: String,
   pub security_protocol: Option<SecurityProtocol>,
-  pub configuration: Option<HashMap<String, String>>,
+  pub configuration: Option<HashMap<String, serde_json::Value>>,
   pub log_level: Option<String>,
   pub broker_address_family: Option<String>,
 }
@@ -124,7 +126,8 @@ impl KafkaClientConfig {
       rdkafka_client_config.set("security.protocol", security_protocol.to_string());
     }
     if let Some(config) = configuration {
-      for (key, value) in config {
+      let string_config = convert_config_values_to_strings(config);
+      for (key, value) in string_config {
         rdkafka_client_config.set(key, value);
       }
     }

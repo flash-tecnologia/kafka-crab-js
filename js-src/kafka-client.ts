@@ -1,3 +1,4 @@
+import type { ReadableOptions } from 'node:stream'
 import {
   type ConsumerConfiguration,
   KafkaClientConfig,
@@ -45,11 +46,12 @@ export class KafkaClient {
   /**
    * Creates a KafkaStreamReadable instance
    * @param {ConsumerConfiguration} consumerConfiguration - Consumer configuration
+   * @param {ReadableOptions} [opts] - Optional stream options
    * @returns {KafkaStreamReadable} A KafkaStreamReadable instance
    * @throws {Error} If the configuration is invalid
    */
-  createStreamConsumer(consumerConfiguration: ConsumerConfiguration) {
+  createStreamConsumer(consumerConfiguration: ConsumerConfiguration, opts: ReadableOptions = { objectMode: true }) {
     const consumer = this.kafkaClientConfig.createConsumer(consumerConfiguration)
-    return new KafkaStreamReadable(consumer)
+    return new KafkaStreamReadable(consumer, opts)
   }
 }

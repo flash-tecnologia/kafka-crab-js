@@ -8,14 +8,17 @@ pub enum CommitMode {
   Sync,
   Async,
 }
-
 #[napi(object)]
 #[derive(Clone, Debug)]
 pub struct ConsumerConfiguration {
   pub group_id: String,
+  #[deprecated(
+    since = "2.0.0",
+    note = "Use createTopic field in TopicPartitionConfig instead"
+  )]
   pub create_topic: Option<bool>,
   pub enable_auto_commit: Option<bool>,
-  pub configuration: Option<HashMap<String, String>>,
+  pub configuration: Option<HashMap<String, serde_json::Value>>,
   pub fetch_metadata_timeout: Option<i64>,
   pub max_batch_messages: Option<u32>,
 }
@@ -48,6 +51,8 @@ pub struct TopicPartitionConfig {
   pub topic: String,
   pub all_offsets: Option<OffsetModel>,
   pub partition_offset: Option<Vec<PartitionOffset>>,
+  pub create_topic: Option<bool>,
+  pub num_partitions: Option<i32>,
 }
 
 #[napi(object)]

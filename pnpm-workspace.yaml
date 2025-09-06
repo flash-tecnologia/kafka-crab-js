@@ -1,3 +1,5 @@
 onlyBuiltDependencies:
+  - '@platformatic/rdkafka'
   - dprint
   - esbuild
+  - node-rdkafka

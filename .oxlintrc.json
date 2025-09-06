@@ -95,12 +95,15 @@
     {
       "files": [
         "**/example/**",
-        "**/__test__/**"
+        "**/__test__/**",
+        "**/benchmark/**"
       ],
       "rules": {
+        "no-process-exit": "allow",
+        "id-length": "allow",
         "no-undefined": "off",
         "no-async-await": "off",
-        "no-console": "off",
+        "no-console": "allow",
         "eslint/no-await-in-loop": "off",
         "unicorn/no-await-expression-member": "off",
         "unicorn/consistent-function-scoping": "off"

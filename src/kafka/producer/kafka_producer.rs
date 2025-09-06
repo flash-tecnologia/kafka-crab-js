@@ -23,7 +23,7 @@ use rdkafka::{
 };
 use tracing::{debug, info};
 
-use crate::kafka::kafka_util::hashmap_to_kafka_headers;
+use crate::kafka::kafka_util::{convert_config_values_to_strings, hashmap_to_kafka_headers};
 
 use super::model::{
   KafkaCrabError, MessageProducer, ProducerConfiguration, ProducerRecord, RecordMetadata,
@@ -114,7 +114,8 @@ impl KafkaProducer {
     let mut producer_config = client_config;
 
     if let Some(config) = producer_configuration.configuration {
-      producer_config.extend(config);
+      let string_config = convert_config_values_to_strings(config);
+      producer_config.extend(string_config);
     }
 
     let queue_timeout = Duration::from_millis(
