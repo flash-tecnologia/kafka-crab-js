@@ -64,7 +64,7 @@ async function kafkaCrabJs(useBatchMode = false): Promise<Result> {
     if (i === iterations) {
       consumer.removeAllListeners('data')
       consumer.pause()
-      consumer.disconnect()
+      consumer.destroy()
       resolve(tracker.results)
     }
   })
@@ -122,7 +122,7 @@ function rdkafkaEvented(): Promise<Result> {
       setTimeout(() => {
         consumer.disconnect()
         resolve(tracker.results)
-      }, 100)
+      }, 20)
     }
   })
 

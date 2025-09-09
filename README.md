@@ -530,27 +530,27 @@ node benchmark/consumer.ts
 ╔════════════════════════╤═════════╤══════════════════╤═══════════╤══════════════════════════╗
 ║ Slower tests           │ Samples │           Result │ Tolerance │ Difference with previous ║
 ╟────────────────────────┼─────────┼──────────────────┼───────────┼──────────────────────────╢
-║ kafkajs                │   50000 │   2566.33 op/sec │ ±  0.89 % │                          ║
-║ kafka-crab-js (serial) │   50000 │  35773.21 op/sec │ ±  2.92 % │ + 1293.94 %              ║
-║ node-rdkafka (stream)  │   50000 │  48405.52 op/sec │ ± 17.73 % │ + 35.31 %                ║
-║ node-rdkafka (evented) │  112979 │  93454.86 op/sec │ ± 74.43 % │ + 93.07 %                ║
+║ kafkajs                │   50000 │   2219.98 op/sec │ ±  0.77 % │                          ║
+║ kafka-crab-js (serial) │   50000 │  39176.30 op/sec │ ±  3.00 % │ + 1664.72 %              ║
+║ node-rdkafka (stream)  │   50000 │  48409.18 op/sec │ ± 14.28 % │ + 23.57 %                ║
+║ node-rdkafka (evented) │   67800 │  79905.11 op/sec │ ± 70.09 % │ + 65.06 %                ║
 ╟────────────────────────┼─────────┼──────────────────┼───────────┼──────────────────────────╢
 ║ Fastest test           │ Samples │           Result │ Tolerance │ Difference with previous ║
 ╟────────────────────────┼─────────┼──────────────────┼───────────┼──────────────────────────╢
-║ kafka-crab-js (batch)  │   50000 │ 135533.29 op/sec │ ± 14.75 % │ + 45.03 %                ║
+║ kafka-crab-js (batch)  │   50000 │ 133542.35 op/sec │ ± 36.05 % │ + 67.13 %                ║
 ╚════════════════════════╧═════════╧══════════════════╧═══════════╧══════════════════════════╝
 ```
 
 The benchmark suite compares:
-- **kafka-crab-js (serial)**: Single message processing - **35,773 ops/sec**
-- **kafka-crab-js (batch)**: Batch message processing - **135,533 ops/sec** (fastest)
-- **node-rdkafka (evented)**: Event-based processing - **93,455 ops/sec**
-- **node-rdkafka (stream)**: Stream-based processing - **48,406 ops/sec**
-- **kafkajs**: Official KafkaJS client - **2,566 ops/sec**
+- **kafka-crab-js (serial)**: Single message processing - **39,176 ops/sec**
+- **kafka-crab-js (batch)**: Batch message processing - **133,542 ops/sec** (fastest)
+- **node-rdkafka (evented)**: Event-based processing - **79,905 ops/sec**
+- **node-rdkafka (stream)**: Stream-based processing - **48,409 ops/sec**
+- **kafkajs**: Official KafkaJS client - **2,220 ops/sec**
 
 Performance characteristics:
-- **13x faster than kafkajs** in serial mode, **53x faster in batch mode**
-- **High throughput**: Batch processing provides 3.8x performance improvement over serial mode
+- **17x faster than kafkajs** in serial mode, **60x faster in batch mode**
+- **High throughput**: Batch processing provides 3.4x performance improvement over serial mode
 - **Low latency**: Optimized for both single and batch message processing
 - **Memory efficient**: Lock-free data structures minimize memory overhead
 - **Concurrent processing**: Zero-contention concurrent operations
