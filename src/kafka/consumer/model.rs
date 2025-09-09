@@ -12,11 +12,6 @@ pub enum CommitMode {
 #[derive(Clone, Debug)]
 pub struct ConsumerConfiguration {
   pub group_id: String,
-  #[deprecated(
-    since = "2.0.0",
-    note = "Use createTopic field in TopicPartitionConfig instead"
-  )]
-  pub create_topic: Option<bool>,
   pub enable_auto_commit: Option<bool>,
   pub configuration: Option<HashMap<String, serde_json::Value>>,
   pub fetch_metadata_timeout: Option<i64>,

@@ -42,7 +42,6 @@ export type CommitMode =  'Sync'|
 
 export interface ConsumerConfiguration {
   groupId: string
-  createTopic?: boolean
   enableAutoCommit?: boolean
   configuration?: Record<string, any>
   fetchMetadataTimeout?: number

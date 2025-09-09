@@ -16,23 +16,29 @@ A lightweight, flexible, and reliable Kafka client for JavaScript/TypeScript. It
 
 This major version includes important breaking changes that improve API consistency and memory management:
 
-1. **Stream Lifecycle Management**:
+1. **Consumer Configuration API Changes**:
+   - **REMOVED**: `createTopic` field from `ConsumerConfiguration`
+   - **Migration**: Use `createTopic` field in `TopicPartitionConfig` instead when subscribing to topics
+   - **Before**: `new KafkaClient().createConsumer({ groupId: 'test', createTopic: true })`
+   - **After**: `consumer.subscribe([{ topic: 'my-topic', createTopic: true }])`
+
+2. **Stream Lifecycle Management**:
    - Stream consumers now properly implement Node.js stream lifecycle methods (`_destroy()`, `_final()`)
    - **Memory leak prevention**: Streams now automatically disconnect Kafka consumers during destruction
    - Better resource cleanup ensures no hanging connections or memory leaks
    - Error handling during stream destruction is improved with proper error propagation
 
-2. **Stream Error Handling**:
+3. **Stream Error Handling**:
    - Stream errors now use `destroy(error)` instead of `emit('error')` for proper stream termination
    - This ensures streams are properly closed when errors occur, preventing resource leaks
    - Error propagation follows Node.js stream standards more closely
 
-3. **Rust Configuration Simplification**:
+4. **Rust Configuration Simplification**:
    - Removed `MAX_BATCH_TIMEOUT` constant - now uses only `DEFAULT_BATCH_TIMEOUT` (1000ms)
    - Simplified timeout validation logic in Rust layer
    - Invalid timeout values (< 1ms) now log warnings and use default timeout
 
-4. **Code Quality Improvements**:
+5. **Code Quality Improvements**:
    - Fixed linting violations: short variable names and `any` type usage
    - Better TypeScript typing throughout the codebase
    - Removed redundant validation functions for cleaner code
@@ -476,7 +482,6 @@ You can find some examples on the [example](https://github.com/flash-tecnologia/
 | Property | Type | Default | Description |
 | --- | --- | --- | --- |
 | `groupId` | `string` || Consumer group ID |
-| `createTopic` | `boolean` | `false` | **v1.10.0+**: Whether to create topic if it doesn't exist |
 | `enableAutoCommit` | `boolean` | `true` | Enable automatic offset commits |
 | `configuration` | `Record<string, any>` | `{}` | Additional consumer configuration options |
 | `fetchMetadataTimeout` | `number` | `60000` | Timeout for fetching metadata (ms) |
