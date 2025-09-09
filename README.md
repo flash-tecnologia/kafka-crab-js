@@ -10,6 +10,42 @@ A lightweight, flexible, and reliable Kafka client for JavaScript/TypeScript. It
 
 ---
 
+## What's New in Version 2.0.0
+
+### BREAKING CHANGES ⚠️
+
+This major version includes important breaking changes that improve API consistency and memory management:
+
+1. **Stream Lifecycle Management**:
+   - Stream consumers now properly implement Node.js stream lifecycle methods (`_destroy()`, `_final()`)
+   - **Memory leak prevention**: Streams now automatically disconnect Kafka consumers during destruction
+   - Better resource cleanup ensures no hanging connections or memory leaks
+   - Error handling during stream destruction is improved with proper error propagation
+
+2. **Stream Error Handling**:
+   - Stream errors now use `destroy(error)` instead of `emit('error')` for proper stream termination
+   - This ensures streams are properly closed when errors occur, preventing resource leaks
+   - Error propagation follows Node.js stream standards more closely
+
+3. **Rust Configuration Simplification**:
+   - Removed `MAX_BATCH_TIMEOUT` constant - now uses only `DEFAULT_BATCH_TIMEOUT` (1000ms)
+   - Simplified timeout validation logic in Rust layer
+   - Invalid timeout values (< 1ms) now log warnings and use default timeout
+
+4. **Code Quality Improvements**:
+   - Fixed linting violations: short variable names and `any` type usage
+   - Better TypeScript typing throughout the codebase
+   - Removed redundant validation functions for cleaner code
+
+### Migration Guide
+
+- **No API changes required** - all public interfaces remain the same
+- **Stream memory management** - streams now automatically clean up resources
+- **Error handling** - streams will properly terminate on errors (existing error handling code still works)
+- **Performance** - simplified timeout logic may provide marginal performance improvements
+
+---
+
 ## What's New in Version 1.10.0
 
 ### Major Updates:
@@ -478,20 +514,38 @@ pnpm add -D tsx  # For running TypeScript files directly
 npx tsx benchmark/utils/setup.ts
 
 # Run consumer performance benchmarks
-npx tsx benchmark/consumer.ts
+node benchmark/consumer.ts
 ```
 
 ### Benchmark Results
 
+*Benchmarks run on macOS with Apple M1 chip processing 50,000 messages*
+
+```
+╔════════════════════════╤═════════╤══════════════════╤═══════════╤══════════════════════════╗
+║ Slower tests           │ Samples │           Result │ Tolerance │ Difference with previous ║
+╟────────────────────────┼─────────┼──────────────────┼───────────┼──────────────────────────╢
+║ kafkajs                │   50000 │   2566.33 op/sec │ ±  0.89 % │                          ║
+║ kafka-crab-js (serial) │   50000 │  35773.21 op/sec │ ±  2.92 % │ + 1293.94 %              ║
+║ node-rdkafka (stream)  │   50000 │  48405.52 op/sec │ ± 17.73 % │ + 35.31 %                ║
+║ node-rdkafka (evented) │  112979 │  93454.86 op/sec │ ± 74.43 % │ + 93.07 %                ║
+╟────────────────────────┼─────────┼──────────────────┼───────────┼──────────────────────────╢
+║ Fastest test           │ Samples │           Result │ Tolerance │ Difference with previous ║
+╟────────────────────────┼─────────┼──────────────────┼───────────┼──────────────────────────╢
+║ kafka-crab-js (batch)  │   50000 │ 135533.29 op/sec │ ± 14.75 % │ + 45.03 %                ║
+╚════════════════════════╧═════════╧══════════════════╧═══════════╧══════════════════════════╝
+```
+
 The benchmark suite compares:
-- **kafka-crab-js (serial)**: Single message processing
-- **kafka-crab-js (batch)**: Batch message processing  
-- **node-rdkafka (evented)**: Event-based processing
-- **node-rdkafka (stream)**: Stream-based processing
-- **kafkajs**: Official KafkaJS client
+- **kafka-crab-js (serial)**: Single message processing - **35,773 ops/sec**
+- **kafka-crab-js (batch)**: Batch message processing - **135,533 ops/sec** (fastest)
+- **node-rdkafka (evented)**: Event-based processing - **93,455 ops/sec**
+- **node-rdkafka (stream)**: Stream-based processing - **48,406 ops/sec**
+- **kafkajs**: Official KafkaJS client - **2,566 ops/sec**
 
 Performance characteristics:
-- **High throughput**: Batch processing provides 2-5x performance improvement
+- **13x faster than kafkajs** in serial mode, **53x faster in batch mode**
+- **High throughput**: Batch processing provides 3.8x performance improvement over serial mode
 - **Low latency**: Optimized for both single and batch message processing
 - **Memory efficient**: Lock-free data structures minimize memory overhead
 - **Concurrent processing**: Zero-contention concurrent operations

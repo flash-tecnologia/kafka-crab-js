@@ -8,7 +8,7 @@ import { KafkaClient } from '../dist/index.js'
 import type { Message } from '../js-binding.js'
 import { brokers, topic } from './utils/definitions.ts'
 
-const iterations = 100_000
+const iterations = 50_000
 
 const maxBytes = 200
 
@@ -39,7 +39,7 @@ async function kafkaCrabJs(useBatchMode = false): Promise<Result> {
   const consumer = client.createStreamConsumer({
     groupId: randomUUID(),
     enableAutoCommit: false,
-    maxBatchMessages: 1024,
+    batchSize: useBatchMode ? 1024 : 1,
     configuration: {
       'auto.offset.reset': 'earliest',
       'enable.auto.commit': false,
@@ -48,10 +48,6 @@ async function kafkaCrabJs(useBatchMode = false): Promise<Result> {
       'fetch.wait.max.ms': 10,
     },
   })
-
-  if (useBatchMode) {
-    consumer.enableBatchMode(1024, 100)
-  }
 
   await consumer.subscribe([{ topic, allOffsets: { position: 'Beginning' } }])
 
@@ -68,7 +64,7 @@ async function kafkaCrabJs(useBatchMode = false): Promise<Result> {
     if (i === iterations) {
       consumer.removeAllListeners('data')
       consumer.pause()
-      consumer.unsubscribe()
+      consumer.disconnect()
       resolve(tracker.results)
     }
   })
@@ -199,7 +195,7 @@ async function kafkajs(): Promise<Result> {
   let last = process.hrtime.bigint()
   await consumer.run({
     autoCommit: false,
-    partitionsConsumedConcurrently: 1,
+    partitionsConsumedConcurrently: 3,
     async eachMessage({ pause, message }) {
       await assertPayload(message.value)
 

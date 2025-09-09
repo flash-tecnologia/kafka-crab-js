@@ -25,4 +25,8 @@ export {
   SecurityProtocol,
 } from '../js-binding.js'
 export { KafkaClient } from './kafka-client.js'
-export { KafkaStreamReadable } from './kafka-stream-readable.js'
+export { BaseKafkaStreamReadable } from './streams/base-kafka-stream-readable.js'
+export { KafkaBatchStreamReadable } from './streams/kafka-batch-stream-readable.js'
+export { KafkaStreamReadable } from './streams/kafka-stream-readable.js'
+
+export type { StreamConsumerConfiguration } from './kafka-client.js'

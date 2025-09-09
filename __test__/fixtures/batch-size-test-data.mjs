@@ -168,6 +168,6 @@ export const PERFORMANCE_TEST_CONFIGS = [
 
 // Expected warning messages for validation
 export const EXPECTED_WARNING_PATTERNS = [
-  /max_messages \d+ out of range \[1-\d+\], using \d+/, // Covers various maxBatchMessages values
+  /size \d+ out of range \[1-\d+\], using \d+/, // Covers various maxBatchMessages values
   /batch_timeout_ms \d+ out of range \[1-30000\], using 100/,
 ]

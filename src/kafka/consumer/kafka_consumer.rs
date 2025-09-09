@@ -38,9 +38,7 @@ use tokio::select;
 
 pub const DEFAULT_SEEK_TIMEOUT: i64 = 1500;
 const MAX_SEEK_TIMEOUT: i64 = 300000; // 5 minutes max
-const DEFAULT_BATCH_TIMEOUT: i64 = 1500;
-const MAX_BATCH_TIMEOUT: i64 = 30000; // 30 seconds max for batch operations
-const DEFAULT_MAX_BATCH_MESSAGES: u32 = 1000;
+const DEFAULT_BATCH_TIMEOUT: i64 = 1000;
 
 /// Validates and bounds-checks timeout values
 #[inline]
@@ -65,12 +63,6 @@ fn validate_seek_timeout(timeout: Option<i64>) -> i64 {
   validate_timeout(timeout, DEFAULT_SEEK_TIMEOUT, MAX_SEEK_TIMEOUT, 0)
 }
 
-/// Validates timeout for batch operations
-#[inline]
-fn validate_batch_timeout(timeout: Option<i64>) -> i64 {
-  validate_timeout(timeout, DEFAULT_BATCH_TIMEOUT, MAX_BATCH_TIMEOUT, 1)
-}
-
 type DisconnectSignal = (watch::Sender<()>, watch::Receiver<()>);
 
 #[napi]
@@ -80,7 +72,6 @@ pub struct KafkaConsumer {
   stream_consumer: Arc<StreamConsumer<KafkaCrabContext>>,
   fetch_metadata_timeout: Duration,
   disconnect_signal: DisconnectSignal,
-  max_batch_messages: u32,
 }
 
 #[napi]
@@ -94,15 +85,11 @@ impl KafkaConsumer {
     let ConsumerConfiguration {
       configuration,
       fetch_metadata_timeout,
-      max_batch_messages,
       ..
     } = consumer_configuration;
     let stream_consumer =
       create_stream_consumer(client_config, consumer_configuration, configuration.clone())
         .map_err(|e| e.into_napi_error("Failed to create stream consumer"))?;
-
-    let max_batch_messages = max_batch_messages
-      .unwrap_or(DEFAULT_MAX_BATCH_MESSAGES);
 
     Ok(KafkaConsumer {
       client_config: client_config.clone(),
@@ -113,7 +100,6 @@ impl KafkaConsumer {
         |t| t as u64,
       )),
       disconnect_signal: watch::channel(()),
-      max_batch_messages,
     })
   }
 
@@ -348,34 +334,36 @@ impl KafkaConsumer {
   /// This method provides 2-5x better performance than calling recv() multiple times
   /// by batching message retrieval and reducing function call overhead.
   ///
-  /// @param max_messages Maximum number of messages to retrieve (1-configured max, default 1000)
-  /// @param timeout_ms Timeout in milliseconds (1-30000)
-  /// @returns Array of messages (may be fewer than max_messages)
+  /// @param size Maximum number of messages to retrieve (1-configured max, default 1000)
+  /// @param timeout_ms Timeout in milliseconds
+  /// @returns Array of messages (may be fewer than size)
   #[napi]
-  pub async fn recv_batch(&self, max_messages: u32, timeout_ms: i64) -> Result<Vec<Message>> {
-    // Validate input parameters against absolute maximum (allows enableBatchMode to override config)
-    let max_messages = if max_messages == 0 {
-      warn!("max_messages cannot be 0, using 1");
+  pub async fn recv_batch(&self, size: u32, timeout_ms: i64) -> Result<Vec<Message>> {
+    // Validate input parameters
+    let size = if size == 0 {
+      warn!("size cannot be 0, using 1");
       1
-    } else if max_messages > self.max_batch_messages {
-      warn!(
-        "max_messages {} exceeds maximum limit {}, using {}",
-        max_messages, self.max_batch_messages, self.max_batch_messages
-      );
-      self.max_batch_messages
     } else {
-      max_messages
+      size
     };
 
-    let timeout_ms = validate_batch_timeout(Some(timeout_ms));
+    let timeout_ms = if timeout_ms < 1 {
+      warn!(
+        "timeout_ms must be at least 1ms, using default: {}ms",
+        DEFAULT_BATCH_TIMEOUT
+      );
+      DEFAULT_BATCH_TIMEOUT
+    } else {
+      timeout_ms
+    };
     let batch_timeout = std::time::Duration::from_millis(timeout_ms as u64);
 
-    let mut messages = Vec::with_capacity(max_messages as usize);
+    let mut messages = Vec::with_capacity(size as usize);
     let mut rx = self.disconnect_signal.1.clone();
     let start_time = std::time::Instant::now();
 
-    // Try to collect messages up to max_messages or timeout
-    for _ in 0..max_messages {
+    // Try to collect messages up to size or timeout
+    for _ in 0..size {
       // Check if we've exceeded our timeout
       if start_time.elapsed() >= batch_timeout {
         break;

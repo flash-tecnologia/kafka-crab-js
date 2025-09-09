@@ -6,7 +6,14 @@ import {
   type ProducerConfiguration,
 } from '../js-binding.js'
 
-import { KafkaStreamReadable } from './kafka-stream-readable.js'
+import { KafkaBatchStreamReadable } from './streams/kafka-batch-stream-readable.js'
+import { KafkaStreamReadable } from './streams/kafka-stream-readable.js'
+
+export interface StreamConsumerConfiguration extends ConsumerConfiguration {
+  batchSize?: number // Default 1 (single mode), > 1 enables batch mode
+  batchTimeout?: number // Default 100ms, only used when batchSize > 1
+  streamOptions?: ReadableOptions
+}
 
 /**
  * KafkaClient class
@@ -44,14 +51,23 @@ export class KafkaClient {
   }
 
   /**
-   * Creates a KafkaStreamReadable instance
-   * @param {ConsumerConfiguration} consumerConfiguration - Consumer configuration
-   * @param {ReadableOptions} [opts] - Optional stream options
-   * @returns {KafkaStreamReadable} A KafkaStreamReadable instance
+   * Creates a stream consumer instance
+   * @param {StreamConsumerConfiguration} streamConfiguration - Stream consumer configuration including batch mode and stream options
+   * @returns {KafkaStreamReadable | KafkaBatchStreamReadable} A stream consumer instance
    * @throws {Error} If the configuration is invalid
    */
-  createStreamConsumer(consumerConfiguration: ConsumerConfiguration, opts: ReadableOptions = { objectMode: true }) {
-    const consumer = this.kafkaClientConfig.createConsumer(consumerConfiguration)
-    return new KafkaStreamReadable(consumer, opts)
+  createStreamConsumer(
+    streamConfiguration: StreamConsumerConfiguration,
+  ): KafkaStreamReadable | KafkaBatchStreamReadable {
+    const { batchSize, batchTimeout, streamOptions, ...consumerConfiguration } = streamConfiguration
+    const kafkaConsumer = this.kafkaClientConfig.createConsumer(consumerConfiguration)
+    const opts = streamOptions ?? { objectMode: true }
+
+    // Return appropriate class based on batch configuration
+    if (batchSize && batchSize > 1) {
+      return new KafkaBatchStreamReadable({ kafkaConsumer, batchSize, batchTimeout, ...opts })
+    }
+
+    return new KafkaStreamReadable({ kafkaConsumer, ...opts })
   }
 }
