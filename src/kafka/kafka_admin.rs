@@ -109,6 +109,7 @@ impl<'a> KafkaAdmin<'a> {
     &self,
     topics: &Vec<String>,
     num_partitions: Option<i32>,
+    replicas: Option<i32>,
   ) -> anyhow::Result<()> {
     debug!("Starting topic creation for topics: {:?}", topics);
 
@@ -134,12 +135,14 @@ impl<'a> KafkaAdmin<'a> {
         .get_parsed_or_default_value(DEFAULT_NUM_PARTITIONS)
     });
 
-    // Get configured replication factor
-    let configured_replication = broker_properties
-      .get("default.replication.factor")
-      .or_else(|| broker_properties.get("kafka.default.replication.factor"))
-      .or_else(|| broker_properties.get("replication.factor"))
-      .get_parsed_or_default_value(DEFAULT_REPLICATION);
+    // Use provided replicas or fall back to broker config
+    let configured_replication = replicas.unwrap_or_else(|| {
+      broker_properties
+        .get("default.replication.factor")
+        .or_else(|| broker_properties.get("kafka.default.replication.factor"))
+        .or_else(|| broker_properties.get("replication.factor"))
+        .get_parsed_or_default_value(DEFAULT_REPLICATION)
+    });
 
     // Safety check: limit by available brokers
     let available_brokers = metadata.brokers().len() as i32;

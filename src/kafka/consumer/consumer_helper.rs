@@ -115,9 +115,10 @@ pub async fn try_create_topic(
   client_config: &ClientConfig,
   fetch_metadata_timeout: Duration,
   num_partitions: Option<i32>,
+  replicas: Option<i32>,
 ) -> anyhow::Result<()> {
   let admin = KafkaAdmin::new(client_config, Some(fetch_metadata_timeout))?;
-  let result = admin.create_topic(topics, num_partitions).await;
+  let result = admin.create_topic(topics, num_partitions, replicas).await;
   if let Err(e) = result {
     warn!("Fail to create topic {:?}", e);
     return Err(anyhow::Error::msg(format!("Fail to create topic: {e:?}")));

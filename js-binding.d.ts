@@ -140,4 +140,5 @@ export interface TopicPartitionConfig {
   partitionOffset?: Array<PartitionOffset>
   createTopic?: boolean
   numPartitions?: number
+  replicas?: number
 }

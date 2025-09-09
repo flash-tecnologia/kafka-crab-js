@@ -156,6 +156,7 @@ impl KafkaConsumer {
           partition_offset: None,
           create_topic: None,
           num_partitions: None,
+          replicas: None,
         }]
       }
       Either::B(config) => {
@@ -174,6 +175,7 @@ impl KafkaConsumer {
           &self.client_config,
           self.fetch_metadata_timeout,
           topic_config.num_partitions,
+          topic_config.replicas
         )
         .await
         .map_err(|e| e.into_napi_error("Failed to create topics"))?;

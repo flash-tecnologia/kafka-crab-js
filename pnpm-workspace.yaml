@@ -1,3 +1,6 @@
+packages:
+  - 'benchmark'
+
 onlyBuiltDependencies:
   - '@platformatic/rdkafka'
   - dprint

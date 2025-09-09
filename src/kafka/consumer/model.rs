@@ -47,6 +47,7 @@ pub struct TopicPartitionConfig {
   pub partition_offset: Option<Vec<PartitionOffset>>,
   pub create_topic: Option<bool>,
   pub num_partitions: Option<i32>,
+  pub replicas: Option<i32>,
 }
 
 #[napi(object)]
