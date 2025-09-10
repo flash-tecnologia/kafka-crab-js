@@ -102,7 +102,7 @@ await test('Batch Size Limits Integration Tests', async (t) => {
 
       try {
         // For the "too_low" scenario (batchSize: 0), we expect the warning:
-        // "max_messages 0 out of range [1-maxBatchMessages], using maxBatchMessages"
+        // "size 0 out of range [1-maxBatchMessages], using maxBatchMessages"
         const timeoutMs = scenario.name === 'too_low' ? 2000 : 5000 // Faster for expected warning cases
         const batch = await consumer.recvBatch(scenario.batchSize, timeoutMs)
 
@@ -115,8 +115,10 @@ await test('Batch Size Limits Integration Tests', async (t) => {
         // Verify batch size is within expected limits
         if (batch.length > 0) {
           const expectedMax = scenario.shouldWarn ? 1500 : BATCH_SIZE_LIMITS.MAX
-          ok(batch.length <= expectedMax,
-            `Batch size ${batch.length} should not exceed maximum ${expectedMax} for scenario ${scenario.name}`)
+          ok(
+            batch.length <= expectedMax,
+            `Batch size ${batch.length} should not exceed maximum ${expectedMax} for scenario ${scenario.name}`,
+          )
         }
 
         console.log(`✓ Scenario ${scenario.name}: batch size ${scenario.batchSize} → received ${batch.length} messages`)
@@ -138,13 +140,14 @@ await test('Batch Size Limits Integration Tests', async (t) => {
 
     // Test stream consumer with oversized batch configuration
     // Use maxBatchMessages to allow larger batch sizes and avoid warnings
-    const streamConsumer = client.createStreamConsumer(createConsumerConfig(`stream-limits-${testId}`, {
+    const consumerConfig = createConsumerConfig(`stream-limits-${testId}`, {
       maxBatchMessages: 30, // Allow batch sizes up to 30
-    }))
-
-    // Try to enable batch mode with size 25 (within configured max of 30)
-    // This should work without warnings since maxBatchMessages is set to 30
-    streamConsumer.enableBatchMode(BATCH_SIZE_LIMITS.OUT_OF_RANGE_HIGH, 2000)
+    })
+    const streamConsumer = client.createStreamConsumer({
+      ...consumerConfig,
+      batchSize: BATCH_SIZE_LIMITS.OUT_OF_RANGE_HIGH, // 25 within configured max of 30
+      batchTimeout: 2000,
+    })
 
     await streamConsumer.subscribe([
       { topic, allOffsets: { position: 'Beginning' } },
@@ -192,22 +195,27 @@ await test('Batch Size Limits Integration Tests', async (t) => {
       await producer.send({ topic, messages })
       await sleep(1000)
 
-      const streamConsumer = client.createStreamConsumer(createConsumerConfig(`timeout-${testId}`))
-
-      // Test the timeout scenario
-      streamConsumer.enableBatchMode(5, scenario.timeoutMs)
+      const consumerConfig = createConsumerConfig(`timeout-${testId}`)
+      const streamConsumer = client.createStreamConsumer({
+        ...consumerConfig,
+        batchSize: 5,
+        batchTimeout: scenario.timeoutMs,
+      })
 
       const config = streamConsumer.getBatchConfig()
 
       // For invalid timeouts, should fall back to default
       if (scenario.shouldWarn) {
-        equal(config.batchTimeoutMs, scenario.expected,
-          `Invalid timeout ${scenario.timeoutMs} should fallback to ${scenario.expected}`)
+        equal(
+          config.batchTimeout,
+          scenario.expected,
+          `Invalid timeout ${scenario.timeoutMs} should fallback to ${scenario.expected}`,
+        )
       } else {
-        equal(config.batchTimeoutMs, scenario.timeoutMs, `Valid timeout ${scenario.timeoutMs} should be preserved`)
+        equal(config.batchTimeout, scenario.timeoutMs, `Valid timeout ${scenario.timeoutMs} should be preserved`)
       }
 
-      console.log(`✓ Timeout scenario ${scenario.name}: ${scenario.timeoutMs}ms → ${config.batchTimeoutMs}ms`)
+      console.log(`✓ Timeout scenario ${scenario.name}: ${scenario.timeoutMs}ms → ${config.batchTimeout}ms`)
 
       await cleanupConsumer(streamConsumer)
     }
@@ -260,27 +268,62 @@ await test('Batch Size Limits Integration Tests', async (t) => {
   })
 
   await t.test('Edge Cases: Zero and negative batch sizes', async () => {
-    const streamConsumer = client.createStreamConsumer(createConsumerConfig('edge-cases'))
+    // Test zero batch size - should return single mode stream (no getBatchConfig method)
+    let consumerConfig = createConsumerConfig('edge-cases-zero')
+    let streamConsumer = client.createStreamConsumer({
+      ...consumerConfig,
+      batchSize: 0,
+      batchTimeout: 1000,
+    })
 
-    // Test zero batch size - should use the provided value (not validated in JS layer)
-    streamConsumer.enableBatchMode(0, 1000)
-    let config = streamConsumer.getBatchConfig()
-    console.log(`Zero batch size config: ${JSON.stringify(config)}`)
-
-    // Test negative batch size - should use the provided value (not validated in JS layer)
-    streamConsumer.enableBatchMode(-5, 1000)
-    config = streamConsumer.getBatchConfig()
-    console.log(`Negative batch size config: ${JSON.stringify(config)}`)
-
-    // Test extremely large batch size - should use the provided value (validation happens in Rust)
-    streamConsumer.enableBatchMode(9999, 1000)
-    config = streamConsumer.getBatchConfig()
-    console.log(`Large batch size config: ${JSON.stringify(config)}`)
-
-    // The JS layer doesn't validate - validation happens in the Rust layer during actual batch operations
-    ok(true, 'Edge case batch sizes are accepted by JS layer (validation happens in Rust)')
-
+    // Zero batch size should return single-mode stream (KafkaStreamReadable)
+    // which doesn't have getBatchConfig method
+    equal(
+      typeof streamConsumer.getBatchConfig,
+      'undefined',
+      'Zero batch size should create single-mode stream without getBatchConfig',
+    )
+    ok(typeof streamConsumer.subscribe === 'function', 'Should still be a valid stream consumer')
     await cleanupConsumer(streamConsumer)
+
+    // Test negative batch size - should also return single mode stream
+    consumerConfig = createConsumerConfig('edge-cases-negative')
+    streamConsumer = client.createStreamConsumer({
+      ...consumerConfig,
+      batchSize: -5,
+      batchTimeout: 1000,
+    })
+
+    // Negative batch size should also return single-mode stream
+    equal(
+      typeof streamConsumer.getBatchConfig,
+      'undefined',
+      'Negative batch size should create single-mode stream without getBatchConfig',
+    )
+    ok(typeof streamConsumer.subscribe === 'function', 'Should still be a valid stream consumer')
+    await cleanupConsumer(streamConsumer)
+
+    // Test extremely large batch size - should enable batch mode (return KafkaBatchStreamReadable)
+    consumerConfig = createConsumerConfig('edge-cases-large')
+    streamConsumer = client.createStreamConsumer({
+      ...consumerConfig,
+      batchSize: 9999,
+      batchTimeout: 1000,
+    })
+
+    // Large batch size should return batch-mode stream (has getBatchConfig method)
+    ok(
+      typeof streamConsumer.getBatchConfig === 'function',
+      'Large batch size should create batch-mode stream with getBatchConfig',
+    )
+    const config = streamConsumer.getBatchConfig()
+    console.log(`Large batch size config: ${JSON.stringify(config)}`)
+    equal(config.batchSize, 9999, 'Large batch size should be preserved')
+    equal(config.batchTimeout, 1000, 'Batch timeout should be set correctly')
+    await cleanupConsumer(streamConsumer)
+
+    // The JS layer now has smarter defaults - only enables batch for positive sizes > 1
+    ok(true, 'Edge case batch sizes handled correctly with new simplified API')
   })
 
   await t.test('Cleanup: Disconnect producer', async () => {

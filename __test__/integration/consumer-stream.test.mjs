@@ -35,8 +35,6 @@ await test('Consumer Stream Integration Tests', async (t) => {
     ok(typeof streamConsumer.pipe === 'function', 'Should have pipe method (Node.js stream)')
     ok(typeof streamConsumer.read === 'function', 'Should have read method (Node.js stream)')
     ok(typeof streamConsumer.rawConsumer === 'function', 'Should have rawConsumer method')
-    ok(typeof streamConsumer.enableBatchMode === 'function', 'Should have enableBatchMode method')
-    ok(typeof streamConsumer.disableBatchMode === 'function', 'Should have disableBatchMode method')
 
     await cleanupConsumer(streamConsumer)
   })

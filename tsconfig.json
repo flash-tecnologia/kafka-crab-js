@@ -1,33 +1,10 @@
 {
-  "compilerOptions": {
-    "strict": true,
-    "target": "ESNext",
-    "module": "NodeNext",
-    "esModuleInterop": true,
-    "declaration": true,
-    "emitDeclarationOnly": true,
-    "allowSyntheticDefaultImports": true,
-    "allowJs": true,
-    "skipLibCheck": true,
-    "rootDir": "./js-src",
-    "outDir": "./dist",
-    "paths": {
-      "src/*": [
-        "./js-src"
-      ]
-    }
-  },
+  "extends": "./tsconfig.base.json",
   "include": [
-    "js-src/*.ts"
-  ],
-  "exclude": [
-    "__test__",
-    "src",
-    "node_modules",
-    "example",
-    "target",
-    "npm",
-    "js-binding.js",
-    "js-binding.d.ts"
+    "benchmark/*.ts",
+    "js-src/*.ts",
+    "test/**/*.ts",
+    "__test/**/*.ts",
+    "examples/**/*.ts"
   ]
 }

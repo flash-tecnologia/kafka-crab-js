@@ -43,7 +43,7 @@ jobs:
           components: clippy, rustfmt
 
       - name: Install dependencies
-        run: pnpm install
+        run: pnpm install --filter=kafka-crab-js
 
       - name: ESLint
         run: pnpm lint
@@ -117,7 +117,7 @@ jobs:
         if: ${{ matrix.settings.setup }}
         shell: bash
       - name: Install dependencies
-        run: pnpm install
+        run: pnpm install --filter=kafka-crab-js
       - name: Setup node x86
         uses: actions/setup-node@v4
         if: matrix.settings.target == 'i686-pc-windows-msvc'
@@ -181,7 +181,7 @@ jobs:
           cache: pnpm
           architecture: ${{ matrix.settings.architecture }}
       - name: Install dependencies
-        run: pnpm install
+        run: pnpm install --filter=kafka-crab-js
       - name: Download artifacts
         uses: actions/download-artifact@v4
         with:
@@ -239,7 +239,7 @@ jobs:
           echo "PNPM_STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_OUTPUT
       # use --force to download the all platform/arch dependencies
       - name: Install dependencies
-        run: pnpm install --force
+        run: pnpm install --force --filter=kafka-crab-js
       - name: Download artifacts
         uses: actions/download-artifact@v4
         with:
@@ -278,7 +278,7 @@ jobs:
           node-version: 22
           cache: pnpm
       - name: Install dependencies
-        run: pnpm install
+        run: pnpm install --filter=kafka-crab-js
       - name: Download all artifacts
         uses: actions/download-artifact@v4
         with:

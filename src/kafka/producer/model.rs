@@ -72,5 +72,5 @@ pub struct KafkaCrabError {
 pub struct ProducerConfiguration {
   pub queue_timeout: Option<i64>,
   pub auto_flush: Option<bool>,
-  pub configuration: Option<HashMap<String, String>>,
+  pub configuration: Option<HashMap<String, serde_json::Value>>,
 }

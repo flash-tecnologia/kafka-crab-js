@@ -54,6 +54,23 @@ pub fn create_message(message: &BorrowedMessage<'_>, payload: &[u8]) -> Message 
   payload_js
 }
 
+pub fn convert_config_values_to_strings(
+  config: HashMap<String, serde_json::Value>,
+) -> HashMap<String, String> {
+  config
+    .into_iter()
+    .map(|(k, v)| {
+      let value_str = match v {
+        serde_json::Value::String(s) => s,
+        serde_json::Value::Number(n) => n.to_string(),
+        serde_json::Value::Bool(b) => b.to_string(),
+        _ => v.to_string(),
+      };
+      (k, value_str)
+    })
+    .collect()
+}
+
 #[cfg(test)]
 mod tests {
   use std::collections::HashMap;

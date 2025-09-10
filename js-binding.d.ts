@@ -23,11 +23,11 @@ export declare class KafkaConsumer {
    * This method provides 2-5x better performance than calling recv() multiple times
    * by batching message retrieval and reducing function call overhead.
    *
-   * @param max_messages Maximum number of messages to retrieve (1-configured max, default 1000)
-   * @param timeout_ms Timeout in milliseconds (1-30000)
-   * @returns Array of messages (may be fewer than max_messages)
+   * @param size Maximum number of messages to retrieve (1-configured max, default 1000)
+   * @param timeout_ms Timeout in milliseconds
+   * @returns Array of messages (may be fewer than size)
    */
-  recvBatch(maxMessages: number, timeoutMs: number): Promise<Array<Message>>
+  recvBatch(size: number, timeoutMs: number): Promise<Array<Message>>
   commit(topic: string, partition: number, offset: number, commit: CommitMode): Promise<void>
 }
 
@@ -42,18 +42,16 @@ export type CommitMode =  'Sync'|
 
 export interface ConsumerConfiguration {
   groupId: string
-  createTopic?: boolean
   enableAutoCommit?: boolean
-  configuration?: Record<string, string>
+  configuration?: Record<string, any>
   fetchMetadataTimeout?: number
-  maxBatchMessages?: number
 }
 
 export interface KafkaConfiguration {
   brokers: string
   clientId: string
   securityProtocol?: SecurityProtocol
-  configuration?: Record<string, string>
+  configuration?: Record<string, any>
   logLevel?: string
   brokerAddressFamily?: string
 }
@@ -111,7 +109,7 @@ export type PartitionPosition =  'Beginning'|
 export interface ProducerConfiguration {
   queueTimeout?: number
   autoFlush?: boolean
-  configuration?: Record<string, string>
+  configuration?: Record<string, any>
 }
 
 export interface ProducerRecord {
@@ -140,4 +138,7 @@ export interface TopicPartitionConfig {
   topic: string
   allOffsets?: OffsetModel
   partitionOffset?: Array<PartitionOffset>
+  createTopic?: boolean
+  numPartitions?: number
+  replicas?: number
 }

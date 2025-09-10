@@ -105,7 +105,12 @@ impl<'a> KafkaAdmin<'a> {
     }
   }
 
-  pub async fn create_topic(&self, topics: &Vec<String>) -> anyhow::Result<()> {
+  pub async fn create_topic(
+    &self,
+    topics: &Vec<String>,
+    num_partitions: Option<i32>,
+    replicas: Option<i32>,
+  ) -> anyhow::Result<()> {
     debug!("Starting topic creation for topics: {:?}", topics);
 
     // Fetch broker config
@@ -121,19 +126,23 @@ impl<'a> KafkaAdmin<'a> {
       .fetch_metadata(None, self.fetch_metadata_timeout)
       .map_err(anyhow::Error::new)?;
 
-    // Try multiple possible property names for num.partitions
-    let num_partitions = broker_properties
-      .get("num.partitions")
-      .or_else(|| broker_properties.get("kafka.num.partitions"))
-      .or_else(|| broker_properties.get("default.partitions"))
-      .get_parsed_or_default_value(DEFAULT_NUM_PARTITIONS);
+    // Use provided num_partitions or fall back to broker config
+    let num_partitions = num_partitions.unwrap_or_else(|| {
+      broker_properties
+        .get("num.partitions")
+        .or_else(|| broker_properties.get("kafka.num.partitions"))
+        .or_else(|| broker_properties.get("default.partitions"))
+        .get_parsed_or_default_value(DEFAULT_NUM_PARTITIONS)
+    });
 
-    // Get configured replication factor
-    let configured_replication = broker_properties
-      .get("default.replication.factor")
-      .or_else(|| broker_properties.get("kafka.default.replication.factor"))
-      .or_else(|| broker_properties.get("replication.factor"))
-      .get_parsed_or_default_value(DEFAULT_REPLICATION);
+    // Use provided replicas or fall back to broker config
+    let configured_replication = replicas.unwrap_or_else(|| {
+      broker_properties
+        .get("default.replication.factor")
+        .or_else(|| broker_properties.get("kafka.default.replication.factor"))
+        .or_else(|| broker_properties.get("replication.factor"))
+        .get_parsed_or_default_value(DEFAULT_REPLICATION)
+    });
 
     // Safety check: limit by available brokers
     let available_brokers = metadata.brokers().len() as i32;

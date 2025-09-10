@@ -11,7 +11,7 @@
 ```
 ✅ Valid range: 1-10 messages
 ⚠️  Out of range: Automatically clamped to 10
-🚨 Warning logs: "max_messages X out of range [1-10], using 10"
+🚨 Warning logs: "size X out of range [1-10], using 10"
 ```
 
 ## 📊 **Test Results Summary**
@@ -59,13 +59,31 @@
 ### **Optimal Configuration**
 ```javascript
 // Recommended for maximum performance
-streamConsumer.enableBatchMode(10, 1000)
+const streamConsumer = client.createStreamConsumer({
+  ...consumerConfig,
+  batchSize: 10,
+  batchTimeout: 1000
+})
 
 // Good for balanced latency/throughput  
-streamConsumer.enableBatchMode(5, 500)
+const streamConsumer = client.createStreamConsumer({
+  ...consumerConfig,
+  batchSize: 5,
+  batchTimeout: 500
+})
 
 // For low-latency scenarios
-streamConsumer.enableBatchMode(3, 100)
+const streamConsumer = client.createStreamConsumer({
+  ...consumerConfig,
+  batchSize: 3,
+  batchTimeout: 100
+})
+
+// Single message mode (default)
+const streamConsumer = client.createStreamConsumer({
+  ...consumerConfig
+  // batchSize defaults to undefined = single message mode
+})
 ```
 
 ### **Performance Tuning**
@@ -80,7 +98,7 @@ streamConsumer.enableBatchMode(3, 100)
 
 ### **Warning Pattern**
 ```
-WARN: max_messages {requested} out of range [1-10], using 10
+WARN: size {requested} out of range [1-10], using 10
 ```
 
 ### **Stream vs Polling Batch API**

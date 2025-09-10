@@ -5,9 +5,12 @@ use rdkafka::{
   consumer::{Consumer, StreamConsumer},
   ClientConfig, Offset, TopicPartitionList,
 };
-use tracing::{debug, error, warn};
+use tracing::{debug, error, info, warn};
 
-use crate::kafka::{consumer::context::LoggingConsumer, kafka_admin::KafkaAdmin};
+use crate::kafka::{
+  consumer::context::LoggingConsumer, kafka_admin::KafkaAdmin,
+  kafka_util::convert_config_values_to_strings,
+};
 
 use super::{
   context::KafkaCrabContext,
@@ -59,7 +62,7 @@ pub fn convert_to_offset_model(offset: &Offset) -> OffsetModel {
 pub fn create_stream_consumer(
   client_config: &ClientConfig,
   consumer_configuration: &ConsumerConfiguration,
-  configuration: Option<HashMap<String, String>>,
+  configuration: Option<HashMap<String, serde_json::Value>>,
 ) -> anyhow::Result<StreamConsumer<KafkaCrabContext>> {
   let context = KafkaCrabContext::new();
 
@@ -72,7 +75,9 @@ pub fn create_stream_consumer(
   let mut consumer_config: ClientConfig = client_config.clone();
 
   if let Some(config) = configuration {
-    consumer_config.extend(config);
+    let string_config = convert_config_values_to_strings(config);
+    info!("consumer values {:?}", string_config);
+    consumer_config.extend(string_config);
   }
 
   debug!(
@@ -109,9 +114,11 @@ pub async fn try_create_topic(
   topics: &Vec<String>,
   client_config: &ClientConfig,
   fetch_metadata_timeout: Duration,
+  num_partitions: Option<i32>,
+  replicas: Option<i32>,
 ) -> anyhow::Result<()> {
   let admin = KafkaAdmin::new(client_config, Some(fetch_metadata_timeout))?;
-  let result = admin.create_topic(topics).await;
+  let result = admin.create_topic(topics, num_partitions, replicas).await;
   if let Err(e) = result {
     warn!("Fail to create topic {:?}", e);
     return Err(anyhow::Error::msg(format!("Fail to create topic: {e:?}")));
