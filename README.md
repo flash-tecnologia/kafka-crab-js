@@ -52,7 +52,7 @@ This major version includes important breaking changes that improve API consiste
 
 ---
 
-## What's New in Version 1.10.0
+## What's New in Version 2.0.0
 
 ### Major Updates:
 
@@ -73,7 +73,7 @@ This major version includes important breaking changes that improve API consiste
    - Better support for advanced librdkafka configuration options
 
 4. **Enhanced Topic Management**:
-   - Added `createTopic` and `numPartitions` options to `TopicPartitionConfig`
+   - Added `createTopic`, `numPartitions`, and `replicas` options to `TopicPartitionConfig`
    - Improved topic creation control during consumer subscription
    - Better handling of partition assignment and topic setup
 
@@ -169,7 +169,7 @@ async function run() {
   });
 
   // Subscribe with topic creation options
-  await consumer.subscribe([{ 
+  await consumer.subscribe([{
     topic: 'foo',
     createTopic: true,
     numPartitions: 3
@@ -206,12 +206,12 @@ const kafkaClient = new KafkaClient({
 });
 
 // Producer configuration is now optional with sensible defaults
-const producer = kafkaClient.createProducer({ 
-  configuration: { 
+const producer = kafkaClient.createProducer({
+  configuration: {
     'message.timeout.ms': 5000,  // Now supports number values
     'batch.size': 16384,
     'compression.type': 'snappy'
-  } 
+  }
 });
 
 const message = {
@@ -260,18 +260,18 @@ const kafkaStream = kafkaClient.createStreamConsumer({
 });
 
 await kafkaStream.subscribe([
-  { topic: 'foo', createTopic: true }, 
+  { topic: 'foo', createTopic: true },
   { topic: 'bar', createTopic: true }
 ]);
 
 kafkaStream.on('data', (message) => {
-  console.log('>>> Message received:', { 
-    payload: message.payload.toString(), 
-    offset: message.offset, 
-    partition: message.partition, 
-    topic: message.topic 
+  console.log('>>> Message received:', {
+    payload: message.payload.toString(),
+    offset: message.offset,
+    partition: message.partition,
+    topic: message.topic
   });
-  
+
   if (message.offset > 10) {
     kafkaStream.destroy();
   }
@@ -298,7 +298,7 @@ const kafkaClient = new KafkaClient({
 const producer = kafkaClient.createProducer({
   configuration: {
     'batch.size': 50000,      // Number value supported
-    'linger.ms': 10,          // Number value supported  
+    'linger.ms': 10,          // Number value supported
     'compression.type': 'lz4',
     'enable.idempotence': true  // Boolean value supported
   }
@@ -385,7 +385,7 @@ async function createConsumer() {
     highWaterMark: 100,
     objectMode: true
   })
-  
+
   await kafkaStream.subscribe([
     { topic: 'foo', createTopic: true },
     { topic: 'bar', createTopic: true },
@@ -502,8 +502,9 @@ You can find some examples on the [example](https://github.com/flash-tecnologia/
 | `topic` | `string` || Topic name |
 | `allOffsets` | `OffsetModel` || Offset configuration for all partitions |
 | `partitionOffset` | `Array<PartitionOffset>` || Per-partition offset configuration |
-| `createTopic` | `boolean` | `false` | **v1.10.0+**: Create topic if it doesn't exist |
-| `numPartitions` | `number` | `1` | **v1.10.0+**: Number of partitions when creating topic |
+| `createTopic` | `boolean` | `false` | **v2.0.x+**: Create topic if it doesn't exist |
+| `numPartitions` | `number` | `1` | **v2.0.x+**: Number of partitions when creating topic |
+| `replicas` | `number` | `1` | **v2.0.x+**: Number of replicas when creating topic |
 
 You can see the available options here: [librdkafka](https://docs.confluent.io/platform/current/clients/librdkafka/html/md_CONFIGURATION.html).
 
@@ -586,7 +587,7 @@ const maxBytes = 200       // Maximum message size
   ```javascript
   const config = {
     'batch.size': 16384,           // number
-    'compression.type': 'snappy',  // string  
+    'compression.type': 'snappy',  // string
     'enable.idempotence': true,    // boolean
     'retries': 5                   // number
   }
