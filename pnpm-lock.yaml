@@ -21,6 +21,9 @@ importers:
       esbuild:
         specifier: ^0.25.9
         version: 0.25.9
+      nanoid:
+        specifier: ^5.1.5
+        version: 5.1.5
       oxlint:
         specifier: ^1.13.0
         version: 1.14.0
