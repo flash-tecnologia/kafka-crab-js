@@ -1,6 +1,6 @@
 {
   "name": "kafka-crab-js",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "type": "module",
   "engines": {
     "node": ">=20"
@@ -71,15 +71,15 @@
   },
   "packageManager": "pnpm@10.15.1",
   "dependencies": {
-    "@napi-rs/cli": "^3.1.5"
+    "@napi-rs/cli": "^3.2.0"
   },
   "devDependencies": {
     "@faker-js/faker": "^10.0.0",
-    "@types/node": "^24.3.0",
+    "@types/node": "^24.3.1",
     "dprint": "^0.50.1",
     "esbuild": "^0.25.9",
     "nanoid": "^5.1.5",
-    "oxlint": "^1.13.0",
+    "oxlint": "^1.15.0",
     "rimraf": "^6.0.1",
     "typescript": "^5.9.2"
   }

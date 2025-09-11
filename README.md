@@ -43,17 +43,6 @@ This major version includes important breaking changes that improve API consiste
    - Better TypeScript typing throughout the codebase
    - Removed redundant validation functions for cleaner code
 
-### Migration Guide
-
-- **No API changes required** - all public interfaces remain the same
-- **Stream memory management** - streams now automatically clean up resources
-- **Error handling** - streams will properly terminate on errors (existing error handling code still works)
-- **Performance** - simplified timeout logic may provide marginal performance improvements
-
----
-
-## What's New in Version 2.0.0
-
 ### Major Updates:
 
 1. **Performance Benchmark Suite**:
@@ -88,23 +77,28 @@ This major version includes important breaking changes that improve API consiste
    - Added support for benchmark directory linting and formatting
    - Improved development workflow with better error handling rules
 
-### Previous Version (1.9.0) Updates:
-7. **Consumer Topic Creation Control**:
+7. **Consumer Topic Creation Control** (v1.9.0):
    - Added fine-grained control over consumer topic creation behavior
    - Enhanced consistency in topic management and cleanup processes
    - Improved handling of topic creation inconsistencies during consumer operations
 
-8. **Enhanced Manual Commit Testing**:
+8. **Enhanced Manual Commit Testing** (v1.9.0):
    - Consolidated manual commit tests for better reliability and coverage
    - Added comprehensive integration tests with PostRebalance event handling
    - Tests now verify offset persistence across consumer restarts and batch processing
 
-### Previous Version (1.8.0) Breaking Changes:
-9. **Async Consumer Commit**:
+9. **Async Consumer Commit** (v1.8.0 - BREAKING):
    - **BREAKING**: The `consumer.commit()` method is now async and must be awaited
    - **Before**: `consumer.commit(topic, partition, offset, 'Sync')`
    - **After**: `await consumer.commit(topic, partition, offset, 'Sync')`
    - This change improves performance by using `spawn_blocking` for non-blocking operations
+
+### Migration Guide
+
+- **No API changes required** - all public interfaces remain the same
+- **Stream memory management** - streams now automatically clean up resources
+- **Error handling** - streams will properly terminate on errors (existing error handling code still works)
+- **Performance** - simplified timeout logic may provide marginal performance improvements
 
 ---
 
@@ -249,12 +243,12 @@ const kafkaClient = new KafkaClient({
   brokerAddressFamily: 'v4',
 });
 
-// Stream consumer with custom ReadableOptions (v1.10.0+)
+// Stream consumer with custom ReadableOptions (v2.0.0+)
 const kafkaStream = kafkaClient.createStreamConsumer({
   groupId: `my-group-id`,
   enableAutoCommit: true,
 }, {
-  objectMode: true,  // Default in v1.10.0+
+  objectMode: true,  // Default in v2.0.0+
   highWaterMark: 1024,
   encoding: null
 });
@@ -464,8 +458,6 @@ You can find some examples on the [example](https://github.com/flash-tecnologia/
 
 ## Configuration
 
-### Configuration properties
-
 ### KafkaConfiguration
 
 | Property | Type | Default | Description |
@@ -475,7 +467,7 @@ You can find some examples on the [example](https://github.com/flash-tecnologia/
 | `securityProtocol` | `SecurityProtocol` || Security protocol to use (PLAINTEXT, SSL, SASL_PLAINTEXT, SASL_SSL) |
 | `logLevel` | `string` | `info`  | Log level for the client |
 | `brokerAddressFamily` | `string` | `"v4"` | Address family to use for the connection (v4, v6) |
-| `configuration` | `Record<string, any>` | `{}` | Additional configuration options for the client. **v1.10.0+**: Now supports any value type (string, number, boolean, object) |
+| `configuration` | `Record<string, any>` | `{}` | Additional configuration options for the client. **v2.0.0+**: Now supports any value type (string, number, boolean, object) |
 
 ### ConsumerConfiguration
 
@@ -502,9 +494,9 @@ You can find some examples on the [example](https://github.com/flash-tecnologia/
 | `topic` | `string` || Topic name |
 | `allOffsets` | `OffsetModel` || Offset configuration for all partitions |
 | `partitionOffset` | `Array<PartitionOffset>` || Per-partition offset configuration |
-| `createTopic` | `boolean` | `false` | **v2.0.x+**: Create topic if it doesn't exist |
-| `numPartitions` | `number` | `1` | **v2.0.x+**: Number of partitions when creating topic |
-| `replicas` | `number` | `1` | **v2.0.x+**: Number of replicas when creating topic |
+| `createTopic` | `boolean` | `false` | **v2.0.0+**: Create topic if it doesn't exist |
+| `numPartitions` | `number` | `1` | **v2.0.0+**: Number of partitions when creating topic |
+| `replicas` | `number` | `1` | **v2.0.0+**: Number of replicas when creating topic |
 
 You can see the available options here: [librdkafka](https://docs.confluent.io/platform/current/clients/librdkafka/html/md_CONFIGURATION.html).
 
@@ -512,7 +504,7 @@ You can see the available options here: [librdkafka](https://docs.confluent.io/p
 
 ### Running Benchmarks
 
-kafka-crab-js v1.10.0+ includes a comprehensive benchmark suite to compare performance against other popular Kafka clients:
+kafka-crab-js v2.0.0+ includes a comprehensive benchmark suite to compare performance against other popular Kafka clients:
 
 ```bash
 # Set up benchmark environment (requires Kafka running locally)
@@ -582,7 +574,7 @@ const maxBytes = 200       // Maximum message size
 - Monitor and tune consumer group performance
 - Leverage the benchmark suite to optimize your specific use case
 
-### Configuration (v1.10.0+)
+### Configuration (v2.0.0+)
 - Use the flexible configuration system with proper data types:
   ```javascript
   const config = {
@@ -599,7 +591,7 @@ const maxBytes = 200       // Maximum message size
 - Handle message ordering when required
 - Use topic creation options for better topic management
 
-### Stream Processing (v1.10.0+)
+### Stream Processing (v2.0.0+)
 - Configure appropriate `ReadableOptions` for your use case
 - Use `objectMode: true` for structured message processing
 - Set appropriate `highWaterMark` based on memory constraints
