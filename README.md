@@ -128,6 +128,7 @@ This major version includes important breaking changes that improve API consiste
 8. [Best Practices](#best-practices)
 9. [Contributing](#contributing)
 10. [License](#license)
+11. [OpenTelemetry Instrumentation](#opentelemetry-instrumentation)
 
 ## Installation
 
@@ -468,6 +469,7 @@ You can find some examples on the [example](https://github.com/flash-tecnologia/
 | `logLevel` | `string` | `info`  | Log level for the client |
 | `brokerAddressFamily` | `string` | `"v4"` | Address family to use for the connection (v4, v6) |
 | `configuration` | `Record<string, any>` | `{}` | Additional configuration options for the client. **v2.0.0+**: Now supports any value type (string, number, boolean, object) |
+| `otel` | `KafkaOtelInstrumentationConfig \| false` | `undefined` | Enable and configure OpenTelemetry instrumentation (see [OpenTelemetry Instrumentation](#opentelemetry-instrumentation)) |
 
 ### ConsumerConfiguration
 
@@ -499,6 +501,30 @@ You can find some examples on the [example](https://github.com/flash-tecnologia/
 | `replicas` | `number` | `1` | **v2.0.0+**: Number of replicas when creating topic |
 
 You can see the available options here: [librdkafka](https://docs.confluent.io/platform/current/clients/librdkafka/html/md_CONFIGURATION.html).
+
+### OpenTelemetry Configuration
+
+OpenTelemetry is enabled by default when the `otel` field is omitted or set to an object. Set `otel: false` to disable instrumentation entirely.
+
+```ts
+const client = new KafkaClient({
+  brokers: 'localhost:29092',
+  clientId: 'payments-service',
+  otel: {
+    serviceName: 'payments-api',
+    ignoreTopics: topic => topic.startsWith('internal.'),
+    messageHook: (span, message) => {
+      span.setAttribute('app.message.key', message.key?.toString('utf8'))
+    },
+  },
+})
+```
+
+When instrumentation is active:
+
+- Producer `send` calls automatically propagate the active span context via Kafka headers while preserving custom headers and their Buffer/string types.
+- Consumer `recv`, `recvBatch`, and stream consumers generate spans that capture consumer group, topic, partition, offset, and batch size.
+- Hooks registered through `messageHook` and `producerHook` execute within the active span context so that additional attributes/events can be attached safely.
 
 ## Performance Benchmarks
 
@@ -624,6 +650,60 @@ pnpm fmt
 npx tsx benchmark/utils/setup.ts
 npx tsx benchmark/consumer.ts
 ```
+
+## OpenTelemetry Instrumentation
+
+Kafka Crab JS offers turnkey tracing for Kafka workloads:
+
+- **Seamless propagation** – Producer instrumentation injects `traceparent`/`tracestate` into Kafka headers while retaining any existing headers (including `Buffer` values) so downstream systems continue to see custom metadata.
+- **Consumer & stream coverage** – Standard consumers, batch consumers, and `createStreamConsumer` streams emit spans that include consumer group, topic, partition, offset, and batch size semantics.
+- **Hook-friendly spans** – Both `messageHook` and `producerHook` callbacks run inside the active span context, simplifying attribute decoration or error handling.
+- **Header normalization helpers** – The runtime automatically normalizes mixed header carriers to Buffers when talking to the native binding, removing the need for manual conversions.
+
+### Minimal Setup Example
+
+```ts
+import { KafkaClient } from 'kafka-crab-js'
+import { NodeTracerProvider } from '@opentelemetry/sdk-trace-node'
+import { SimpleSpanProcessor } from '@opentelemetry/sdk-trace-base'
+import { AsyncHooksContextManager } from '@opentelemetry/context-async-hooks'
+import { context } from '@opentelemetry/api'
+
+const provider = new NodeTracerProvider()
+provider.addSpanProcessor(new SimpleSpanProcessor(exporter))
+provider.register()
+
+context.setGlobalContextManager(new AsyncHooksContextManager().enable())
+
+const client = new KafkaClient({
+  brokers: 'localhost:29092',
+  clientId: 'orders-api',
+  otel: {
+    serviceName: 'orders-service',
+    producerHook: span => span.setAttribute('messaging.client.kind', 'producer'),
+  },
+})
+
+const producer = client.createProducer()
+await producer.send({
+  topic: 'orders',
+  messages: [{
+    payload: Buffer.from(JSON.stringify({ orderId: '123' })),
+    headers: { 'custom-header': 'foo' },
+  }],
+})
+
+const consumer = client.createStreamConsumer({
+  groupId: 'orders-consumer',
+  enableAutoCommit: false,
+})
+
+consumer.on('data', message => {
+  console.log(message.headers?.['custom-header']?.toString())
+})
+```
+
+Set `otel: false` in the client configuration to opt-out.
 
 ## License
 

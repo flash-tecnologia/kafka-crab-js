@@ -62,25 +62,34 @@
     "test:integration:manual-commit": "cd __test__/integration && node consumer-manual-commit.test.mjs",
     "test:integration:batch": "cd __test__/integration && node consumer-stream-batch.test.mjs",
     "test:integration:limits": "cd __test__/integration && node batch-size-limits.test.mjs",
-    "kafka:up": "cd __test__/integration && (docker-compose up -d || podman-compose up -d)",
+    "kafka:up": "bash ./scripts/kafka-up.sh",
     "kafka:down": "cd __test__/integration && (docker-compose down -v || podman-compose down -v)",
     "kafka:logs": "cd __test__/integration && (docker-compose logs -f kafka || podman-compose logs -f kafka)",
     "version": "napi version",
     "fmt": "dprint fmt",
     "lint": "oxlint ."
   },
-  "packageManager": "pnpm@10.15.1",
+  "packageManager": "pnpm@10.20.0+sha512.cf9998222162dd85864d0a8102e7892e7ba4ceadebbf5a31f9c2fce48dfce317a9c53b9f6464d1ef9042cba2e02ae02a9f7c143a2b438cd93c91840f0192b9dd",
   "dependencies": {
-    "@napi-rs/cli": "^3.2.0"
+    "@napi-rs/cli": "^3.4.1"
+  },
+  "optionalDependencies": {
+    "@opentelemetry/api": "^1.9.0",
+    "@opentelemetry/core": "^2.0.0",
+    "@opentelemetry/instrumentation": "^0.207.0",
+    "@opentelemetry/semantic-conventions": "^1.28.0"
   },
   "devDependencies": {
-    "@faker-js/faker": "^10.0.0",
-    "@types/node": "^24.3.1",
-    "dprint": "^0.50.1",
-    "esbuild": "^0.25.9",
-    "nanoid": "^5.1.5",
-    "oxlint": "^1.15.0",
-    "rimraf": "^6.0.1",
-    "typescript": "^5.9.2"
+    "@faker-js/faker": "^10.1.0",
+    "@opentelemetry/context-async-hooks": "^2.0.0",
+    "@opentelemetry/sdk-trace-base": "^2.0.0",
+    "@opentelemetry/sdk-trace-node": "^1.29.0",
+    "@types/node": "^24.9.2",
+    "dprint": "^0.50.2",
+    "esbuild": "^0.25.11",
+    "nanoid": "^5.1.6",
+    "oxlint": "^1.25.0",
+    "rimraf": "^6.1.0",
+    "typescript": "^5.9.3"
   }
 }

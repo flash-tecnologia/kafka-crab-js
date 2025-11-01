@@ -274,15 +274,20 @@ await test('Consumer Manual Commit Integration Tests', async (t) => {
 
     // Consume first half of messages and commit
     const halfCount = Math.floor(messages.length / 2)
-    let lastCommittedOffset = -1
+    const lastCommittedOffsets = new Map()
 
     for (let i = 0; i < halfCount; i++) {
       const message = await consumer1.recv()
       if (message && isTestMessage(message, testId)) {
-        console.log(`Consumer1 received message at offset ${message.offset}`)
-        await consumer1.commit(message.topic, message.partition, message.offset + 1, 'Sync')
-        lastCommittedOffset = message.offset + 1
-        console.log(`Consumer1 committed offset ${lastCommittedOffset}`)
+        const partitionKey = `${message.topic}:${message.partition}`
+        const committedOffset = message.offset + 1
+
+        console.log(
+          `Consumer1 received message at offset ${message.offset} on partition ${message.partition} and committing offset ${committedOffset}`,
+        )
+
+        await consumer1.commit(message.topic, message.partition, committedOffset, 'Sync')
+        lastCommittedOffsets.set(partitionKey, committedOffset)
       }
     }
 
@@ -309,12 +314,21 @@ await test('Consumer Manual Commit Integration Tests', async (t) => {
       const message = await consumer2.recv()
 
       if (message && isTestMessage(message, testId)) {
-        console.log(`Consumer2 received message at offset ${message.offset}`)
+        const partitionKey = `${message.topic}:${message.partition}`
+        const committedOffset = lastCommittedOffsets.get(partitionKey)
+
+        console.log(
+          `Consumer2 received message at offset ${message.offset} on partition ${message.partition} (committed offset: ${
+            committedOffset ?? 'none'
+          })`,
+        )
         remainingMessages.push(message)
 
-        // Verify this message's offset is >= lastCommittedOffset
-        ok(message.offset >= lastCommittedOffset,
-          `Message offset ${message.offset} should be >= last committed offset ${lastCommittedOffset}`)
+        if (committedOffset !== undefined) {
+          // Verify this message's offset is >= committed offset for the same partition
+          ok(message.offset >= committedOffset,
+            `Message offset ${message.offset} should be >= last committed offset ${committedOffset} for partition ${message.partition}`)
+        }
       }
 
       if (!message) {
@@ -326,7 +340,7 @@ await test('Consumer Manual Commit Integration Tests', async (t) => {
 
     // Verify that consumer2 picked up from where consumer1 left off
     ok(remainingMessages.length > 0, 'Consumer2 should receive remaining messages')
-    console.log(`Consumer1 committed up to offset ${lastCommittedOffset}`)
+    console.log('Committed offsets before restart:', Object.fromEntries(lastCommittedOffsets))
     console.log(`Consumer2 received ${remainingMessages.length} remaining messages`)
   })
 
