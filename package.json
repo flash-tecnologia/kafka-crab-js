@@ -69,7 +69,7 @@
     "fmt": "dprint fmt",
     "lint": "oxlint ."
   },
-  "packageManager": "pnpm@10.20.0+sha512.cf9998222162dd85864d0a8102e7892e7ba4ceadebbf5a31f9c2fce48dfce317a9c53b9f6464d1ef9042cba2e02ae02a9f7c143a2b438cd93c91840f0192b9dd",
+  "packageManager": "pnpm@10.23.0",
   "dependencies": {
     "@napi-rs/cli": "^3.4.1"
   },
@@ -84,12 +84,12 @@
     "@opentelemetry/context-async-hooks": "^2.0.0",
     "@opentelemetry/sdk-trace-base": "^2.0.0",
     "@opentelemetry/sdk-trace-node": "^1.29.0",
-    "@types/node": "^24.9.2",
+    "@types/node": "^24.10",
     "dprint": "^0.50.2",
-    "esbuild": "^0.25.11",
+    "esbuild": "^0.27.0",
     "nanoid": "^5.1.6",
-    "oxlint": "^1.25.0",
-    "rimraf": "^6.1.0",
+    "oxlint": "^1.30.0",
+    "rimraf": "^6.1.2",
     "typescript": "^5.9.3"
   }
 }
