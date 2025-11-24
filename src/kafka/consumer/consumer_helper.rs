@@ -3,6 +3,8 @@ use std::{collections::HashMap, time::Duration};
 use rdkafka::{
   config::RDKafkaLogLevel,
   consumer::{Consumer, StreamConsumer},
+  error::{KafkaError, RDKafkaError},
+  types::RDKafkaErrorCode,
   ClientConfig, Offset, TopicPartitionList,
 };
 use tracing::{debug, error, info, warn};
@@ -120,11 +122,57 @@ pub async fn try_create_topic(
   let admin = KafkaAdmin::new(client_config, Some(fetch_metadata_timeout))?;
   let result = admin.create_topic(topics, num_partitions, replicas).await;
   if let Err(e) = result {
+    if is_non_fatal_topic_error(&e) {
+      warn!("Topic creation skipped/unauthorized/exists: {e:?}");
+      return Ok(());
+    }
     warn!("Fail to create topic {:?}", e);
     return Err(anyhow::Error::msg(format!("Fail to create topic: {e:?}")));
   }
   debug!("Topic(s) created: {:?}", topics);
   Ok(())
+}
+
+fn is_non_fatal_topic_error(err: &anyhow::Error) -> bool {
+  if let Some(kafka_err) = err.downcast_ref::<KafkaError>() {
+    return matches_non_fatal_code(kafka_err);
+  }
+
+  if let Some(rd_err) = err.downcast_ref::<RDKafkaError>() {
+    return matches_non_fatal_code(&KafkaError::AdminOp(rd_err.code()));
+  }
+
+  let msg = err.to_string().to_lowercase();
+  msg.contains("topic already exists") || msg.contains("topicalreadyexists") || msg.contains("authorization")
+}
+
+fn matches_non_fatal_code(err: &KafkaError) -> bool {
+  let code = match err {
+    KafkaError::AdminOp(code)
+    | KafkaError::ConsumerCommit(code)
+    | KafkaError::ConsumerQueueClose(code)
+    | KafkaError::Flush(code)
+    | KafkaError::Global(code)
+    | KafkaError::GroupListFetch(code)
+    | KafkaError::MessageProduction(code)
+    | KafkaError::MetadataFetch(code)
+    | KafkaError::OffsetFetch(code)
+    | KafkaError::Rebalance(code)
+    | KafkaError::SetPartitionOffset(code)
+    | KafkaError::StoreOffset(code)
+    | KafkaError::MockCluster(code) => Some(*code),
+    KafkaError::Transaction(rd_err) => Some(rd_err.code()),
+    _ => None,
+  };
+
+  matches!(
+    code,
+    Some(
+      RDKafkaErrorCode::TopicAlreadyExists
+        | RDKafkaErrorCode::TopicAuthorizationFailed
+        | RDKafkaErrorCode::ClusterAuthorizationFailed
+    )
+  )
 }
 
 pub fn set_offset_of_all_partitions(

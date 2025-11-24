@@ -167,10 +167,10 @@ impl KafkaConsumer {
 
     // Process topic creation per topic with individual configurations
     for topic_config in &topics {
-      let create_topic = topic_config.create_topic.unwrap_or(true);
+      let create_topic = topic_config.create_topic.unwrap_or(false);
       if create_topic {
         debug!("Creating topic if not exists: {:?}", &topic_config.topic);
-        try_create_topic(
+        if let Err(e) = try_create_topic(
           &vec![topic_config.topic.clone()],
           &self.client_config,
           self.fetch_metadata_timeout,
@@ -178,7 +178,12 @@ impl KafkaConsumer {
           topic_config.replicas,
         )
         .await
-        .map_err(|e| e.into_napi_error("Failed to create topics"))?;
+        {
+          warn!(
+            "Topic creation failed/ignored for {}: {:?} (continuing to subscribe)",
+            &topic_config.topic, e
+          );
+        }
       } else {
         debug!(
           "Topic creation disabled for topic: {:?}",

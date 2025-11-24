@@ -210,17 +210,18 @@ impl KafkaProducer {
       .as_ref()
       .map_or_else(OwnedHeaders::new, hashmap_to_kafka_headers);
 
-    let key = message
-      .key
-      .as_deref()
-      .map(ToBytes::to_bytes)
-      .unwrap_or_default();
+    // Preserve Kafka semantics: None => no key (round-robin), Some => hashed partition
+    let key = message.key.as_deref().map(ToBytes::to_bytes);
 
     let opaque = Arc::new(record_id.to_string());
-    let record: BaseRecord<'_, [u8], [u8], Arc<String>> = BaseRecord::with_opaque_to(topic, opaque)
-      .payload(message.payload.to_bytes())
-      .headers(headers)
-      .key(key);
+    let mut record: BaseRecord<'_, [u8], [u8], Arc<String>> =
+      BaseRecord::with_opaque_to(topic, opaque)
+        .payload(message.payload.to_bytes())
+        .headers(headers);
+
+    if let Some(key) = key {
+      record = record.key(key);
+    }
 
     self
       .producer
