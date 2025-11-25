@@ -88,6 +88,17 @@ export abstract class BaseKafkaStreamReadable extends Readable {
    * @private
    */
   _destroy(error: Error | null, callback: (error?: Error | null) => void): void {
+    // Signal end-of-stream to ensure 'end' listeners fire even when destroyed early
+    try {
+      this.push(null)
+    } catch {
+      // ignore if already ended
+    }
+    try {
+      this.emit('end')
+    } catch {
+      // ignore if already emitted
+    }
     // Always unsubscribe first to stop receiving messages
     try {
       this.kafkaConsumer.unsubscribe()

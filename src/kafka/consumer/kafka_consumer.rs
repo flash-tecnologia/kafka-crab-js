@@ -121,15 +121,25 @@ impl KafkaConsumer {
     ts_args_type = "callback: (error: Error | undefined, event: KafkaEvent) => void"
   )]
   pub fn on_events(&self, callback: Arc<ThreadsafeFunction<KafkaEvent>>) -> Result<()> {
-    let mut rx = self.stream_consumer.context().event_channel.1.clone();
+    let mut rx = self.stream_consumer.context().event_channel.1.resubscribe();
     let mut disconnect_signal = self.disconnect_signal.1.clone();
 
     tokio::spawn(async move {
       loop {
         select! {
-            _ = rx.changed() => {
-                if let Some(event) = rx.borrow().clone() {
-                    callback.call(Ok(event), ThreadsafeFunctionCallMode::NonBlocking);
+            event = rx.recv() => {
+                match event {
+                    Ok(event) => {
+                        callback.call(Ok(event), ThreadsafeFunctionCallMode::NonBlocking);
+                    }
+                    Err(tokio::sync::broadcast::error::RecvError::Closed) => {
+                        debug!("Event channel closed");
+                        break;
+                    }
+                    Err(tokio::sync::broadcast::error::RecvError::Lagged(skipped)) => {
+                        warn!("Lagged on event channel; skipped {} events", skipped);
+                        continue;
+                    }
                 }
             }
             _ = disconnect_signal.changed() => {

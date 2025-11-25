@@ -251,18 +251,22 @@ export function createProducerSpan(
   tracer: Tracer,
   record: ProducerRecord,
   operation = 'send',
+  parentContext?: Context,
 ): Span | null {
   if (!tracer) {
     return null
   }
+  const parent = parentContext ?? context.active()
 
   const spanName = `${record.topic} ${operation}`
   const attributes = getProducerRecordAttributes(record, operation)
 
-  return tracer.startSpan(spanName, {
+  const spanOptions = {
     kind: SpanKind.PRODUCER,
     attributes,
-  })
+  }
+
+  return tracer.startSpan(spanName, spanOptions, parent)
 }
 
 // Create span for consumer operation
@@ -298,6 +302,7 @@ export function createBatchSpan(
   batchSize: number,
   topic?: string,
   operation = 'batch_process',
+  parentContext?: Context,
 ): Span | null {
   if (!tracer) {
     return null
@@ -315,8 +320,14 @@ export function createBatchSpan(
     attributes[KAFKA_SEMANTIC_CONVENTIONS.MESSAGING_DESTINATION_KIND] = KAFKA_DEFAULTS.DESTINATION_KIND
   }
 
-  return tracer.startSpan(spanName, {
+  const spanOptions = {
     kind: SpanKind.CONSUMER,
     attributes,
-  })
+  }
+
+  if (parentContext) {
+    return tracer.startSpan(spanName, spanOptions, parentContext)
+  }
+
+  return tracer.startSpan(spanName, spanOptions)
 }

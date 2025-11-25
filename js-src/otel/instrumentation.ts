@@ -139,16 +139,19 @@ export class KafkaCrabInstrumentation extends InstrumentationBase {
     // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
     const tracer = this._kafkaTracer!
 
-    return async function instrumentedSend(this: KafkaProducer, record: ProducerRecord | ProducerRecord[]) {
-      if (!record) {
-        return originalSend.call(this, record as ProducerRecord)
-      }
+      return async function instrumentedSend(this: KafkaProducer, record: ProducerRecord | ProducerRecord[]) {
+        if (!record) {
+          return originalSend.call(this, record as ProducerRecord)
+        }
 
-      const isArrayInput = Array.isArray(record)
-      const records = isArrayInput ? record : [record]
+        // Capture the current caller context to preserve parent relationships across async boundaries
+        const callerContext = context.active()
 
-      if (records.length === 0) {
-        return originalSend.call(this, isArrayInput ? records : (record as ProducerRecord))
+        const isArrayInput = Array.isArray(record)
+        const records = isArrayInput ? record : [record]
+
+        if (records.length === 0) {
+          return originalSend.call(this, isArrayInput ? records : (record as ProducerRecord))
       }
 
       // If every record should be ignored, bypass instrumentation altogether
@@ -162,12 +165,15 @@ export class KafkaCrabInstrumentation extends InstrumentationBase {
 
       const spans: Span[] = []
 
+      const spanMetadata: { span: Span; record: ProducerRecord }[] = []
+
       const instrumentedRecords = records.map((currentRecord) => {
         if (!currentRecord || shouldIgnoreTopic(currentRecord.topic, instrumentation._kafkaConfig.ignoreTopics)) {
           return currentRecord
         }
 
-        const span = createProducerSpan(tracer, currentRecord, 'send')
+        // Make producer span a child of the caller's active context
+        const span = createProducerSpan(tracer, currentRecord, 'send', callerContext)
 
         if (!span) {
           return currentRecord
@@ -178,8 +184,9 @@ export class KafkaCrabInstrumentation extends InstrumentationBase {
         }
 
         spans.push(span)
+        spanMetadata.push({ span, record: currentRecord })
 
-        const spanContext = trace.setSpan(context.active(), span)
+        const spanContext = trace.setSpan(callerContext, span)
 
         const instrumentedRecord: ProducerRecord = {
           ...currentRecord,
@@ -211,11 +218,35 @@ export class KafkaCrabInstrumentation extends InstrumentationBase {
       const payload = isArrayInput ? instrumentedRecords : instrumentedRecords[0]
 
       try {
-        const result = await originalSend.call(this, payload as ProducerRecord)
+        const result = await context.with(callerContext, async () => originalSend.call(this, payload as ProducerRecord))
 
-        for (const span of spans) {
-          setSpanStatus(span)
+        // Enrich spans with delivery metadata when available
+        const metadataArray = Array.isArray(result) ? result : []
+        for (let idx = 0; idx < spanMetadata.length; idx++) {
+          const { span } = spanMetadata[idx]
+          const metadata = metadataArray[idx]
+          if (metadata) {
+            if (metadata.partition !== undefined) {
+              span.setAttribute('messaging.kafka.partition', metadata.partition)
+            }
+            if (metadata.offset !== undefined) {
+              span.setAttribute('messaging.kafka.offset', metadata.offset)
+            }
+          }
+          setSpanStatus(span, metadata?.error ? new Error(metadata.error.message) : undefined)
           span.end()
+        }
+
+        // If a producerHook is configured, invoke it with metadata for the first record
+        if (instrumentation._kafkaConfig.producerHook && metadataArray.length) {
+          const [first] = spanMetadata
+          if (first) {
+            try {
+              instrumentation._kafkaConfig.producerHook(first.span, first.record, metadataArray[0])
+            } catch (error) {
+              diag.warn('Producer hook failed with metadata:', error)
+            }
+          }
         }
 
         return result
@@ -253,28 +284,33 @@ export class KafkaCrabInstrumentation extends InstrumentationBase {
       }
 
       // Extract trace context from message headers
-      const parentContext = extractTraceContext(message.headers || {})
+      const parentContext = extractTraceContext(message.headers || {}) || context.active()
 
       // Create consumer span with extracted context
       const span = createConsumerSpan(tracer, message, 'process', parentContext)
 
       if (span) {
-        // Add consumer group if available
-        if (groupId) {
-          span.setAttributes({ 'messaging.consumer.group.name': groupId })
-        }
+        const spanCtx = trace.setSpan(parentContext, span)
 
-        // Call message hook if configured
-        if (instrumentation._kafkaConfig.messageHook) {
-          try {
-            instrumentation._kafkaConfig.messageHook(span, message)
-          } catch (error) {
-            diag.warn('Message hook failed:', error)
+        context.with(spanCtx, () => {
+          // Add consumer group if available
+          if (groupId) {
+            span.setAttributes({ 'messaging.consumer.group.name': groupId })
           }
-        }
 
-        // End span immediately for receive operation
-        setSpanStatus(span)
+          // Call message hook if configured
+          if (instrumentation._kafkaConfig.messageHook) {
+            try {
+              instrumentation._kafkaConfig.messageHook(span, message)
+            } catch (error) {
+              diag.warn('Message hook failed:', error)
+            }
+          }
+
+          // End span immediately for receive operation
+          setSpanStatus(span)
+        })
+
         span.end()
       }
 
@@ -312,9 +348,16 @@ export class KafkaCrabInstrumentation extends InstrumentationBase {
         return messages
       }
 
-      // Create batch span
+      // Create batch span; prefer extracted context, fallback to active context
       const [firstMessage] = instrumentedMessages
-      const batchSpan = createBatchSpan(tracer, instrumentedMessages.length, firstMessage.topic, 'batch_process')
+      const parentContext = extractTraceContext(firstMessage.headers || {}) || context.active()
+      const batchSpan = createBatchSpan(
+        tracer,
+        instrumentedMessages.length,
+        firstMessage.topic,
+        'batch_process',
+        parentContext,
+      )
 
       if (batchSpan) {
         // Add consumer group if available
@@ -323,27 +366,30 @@ export class KafkaCrabInstrumentation extends InstrumentationBase {
         }
 
         try {
-          // Create individual spans for each message in the batch
+          // Create individual spans for each message in the batch within parent context
           for (const message of instrumentedMessages) {
-            const parentContext = extractTraceContext(message.headers || {})
-            const messageSpan = createConsumerSpan(tracer, message, 'process', parentContext)
+            const msgParentContext = extractTraceContext(message.headers || {}) || parentContext
+            const messageSpan = createConsumerSpan(tracer, message, 'process', msgParentContext)
 
             if (messageSpan) {
-              // Link to batch span
-              messageSpan.setAttributes({
-                'messaging.batch.message_count': instrumentedMessages.length,
-              })
+              const messageSpanContext = trace.setSpan(msgParentContext || context.active(), messageSpan)
+              context.with(messageSpanContext, () => {
+                // Link to batch span
+                messageSpan.setAttributes({
+                  'messaging.batch.message_count': instrumentedMessages.length,
+                })
 
-              // Call message hook if configured
-              if (instrumentation._kafkaConfig.messageHook) {
-                try {
-                  instrumentation._kafkaConfig.messageHook(messageSpan, message)
-                } catch (error) {
-                  diag.warn('Message hook failed:', error)
+                // Call message hook if configured
+                if (instrumentation._kafkaConfig.messageHook) {
+                  try {
+                    instrumentation._kafkaConfig.messageHook(messageSpan, message)
+                  } catch (error) {
+                    diag.warn('Message hook failed:', error)
+                  }
                 }
-              }
 
-              setSpanStatus(messageSpan)
+                setSpanStatus(messageSpan)
+              })
               messageSpan.end()
             }
           }
