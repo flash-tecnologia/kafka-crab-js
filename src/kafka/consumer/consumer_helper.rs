@@ -143,7 +143,9 @@ fn is_non_fatal_topic_error(err: &anyhow::Error) -> bool {
   }
 
   let msg = err.to_string().to_lowercase();
-  msg.contains("topic already exists") || msg.contains("topicalreadyexists") || msg.contains("authorization")
+  msg.contains("topic already exists")
+    || msg.contains("topicalreadyexists")
+    || msg.contains("authorization")
 }
 
 fn matches_non_fatal_code(err: &KafkaError) -> bool {

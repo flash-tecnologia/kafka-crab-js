@@ -10,7 +10,10 @@ use crate::kafka::consumer::consumer_helper::convert_tpl_to_array_of_topic_parti
 
 use super::model::TopicPartition;
 
-pub type TxRxContext = (broadcast::Sender<KafkaEvent>, broadcast::Receiver<KafkaEvent>);
+pub type TxRxContext = (
+  broadcast::Sender<KafkaEvent>,
+  broadcast::Receiver<KafkaEvent>,
+);
 
 pub type LoggingConsumer = StreamConsumer<KafkaCrabContext>;
 
@@ -53,7 +56,10 @@ impl KafkaCrabContext {
   fn send_event(&self, event: KafkaEvent) {
     // Use try_send to avoid blocking; drop with warning if buffer is full
     if let Err(err) = self.event_channel.0.send(event) {
-      warn!("Event channel send failed (buffer full or closed): {:?}", err);
+      warn!(
+        "Event channel send failed (buffer full or closed): {:?}",
+        err
+      );
     };
   }
 }
