@@ -28,7 +28,7 @@ jobs:
     steps:
       - uses: actions/checkout@v6
       - name: setup pnpm
-        uses: pnpm/action-setup@v6
+        uses: pnpm/action-setup@v4
       - name: Setup node
         uses: actions/setup-node@v6
         with:
@@ -85,7 +85,7 @@ jobs:
     steps:
       - uses: actions/checkout@v6
       - name: setup pnpm
-        uses: pnpm/action-setup@v6
+        uses: pnpm/action-setup@v4
       - name: Setup node
         uses: actions/setup-node@v6
         with:
@@ -171,7 +171,7 @@ jobs:
     steps:
       - uses: actions/checkout@v6
       - name: setup pnpm
-        uses: pnpm/action-setup@v6
+        uses: pnpm/action-setup@v4
       - name: Setup node
         uses: actions/setup-node@v6
         with:
@@ -209,7 +209,7 @@ jobs:
     steps:
       - uses: actions/checkout@v6
       - name: setup pnpm
-        uses: pnpm/action-setup@v6
+        uses: pnpm/action-setup@v4
       - name: Setup node
         uses: actions/setup-node@v6
         with:
@@ -269,7 +269,7 @@ jobs:
     steps:
       - uses: actions/checkout@v6
       - name: setup pnpm
-        uses: pnpm/action-setup@v6
+        uses: pnpm/action-setup@v4
       - name: Setup node
         uses: actions/setup-node@v6
         with:
