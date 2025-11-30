@@ -1,4 +1,4 @@
-import { context, type Span, trace } from '@opentelemetry/api'
+import { context, type Span } from '@opentelemetry/api'
 import type { ReadableOptions } from 'node:stream'
 import {
   type ConsumerConfiguration,
