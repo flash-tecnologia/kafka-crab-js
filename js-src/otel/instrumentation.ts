@@ -119,6 +119,9 @@ export class KafkaCrabInstrumentation extends InstrumentationBase {
         return span
       },
       endSpan: (span, error) => {
+        if (!span) {
+          return
+        }
         setSpanStatus(span, error)
         span.end()
       },
@@ -139,19 +142,19 @@ export class KafkaCrabInstrumentation extends InstrumentationBase {
     // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
     const tracer = this._kafkaTracer!
 
-      return async function instrumentedSend(this: KafkaProducer, record: ProducerRecord | ProducerRecord[]) {
-        if (!record) {
-          return originalSend.call(this, record as ProducerRecord)
-        }
+    return async function instrumentedSend(this: KafkaProducer, record: ProducerRecord | ProducerRecord[]) {
+      if (!record) {
+        return originalSend.call(this, record as ProducerRecord)
+      }
 
-        // Capture the current caller context to preserve parent relationships across async boundaries
-        const callerContext = context.active()
+      // Capture the current caller context to preserve parent relationships across async boundaries
+      const callerContext = context.active()
 
-        const isArrayInput = Array.isArray(record)
-        const records = isArrayInput ? record : [record]
+      const isArrayInput = Array.isArray(record)
+      const records = isArrayInput ? record : [record]
 
-        if (records.length === 0) {
-          return originalSend.call(this, isArrayInput ? records : (record as ProducerRecord))
+      if (records.length === 0) {
+        return originalSend.call(this, isArrayInput ? records : (record as ProducerRecord))
       }
 
       // If every record should be ignored, bypass instrumentation altogether
@@ -411,14 +414,16 @@ export class KafkaCrabInstrumentation extends InstrumentationBase {
     return {
       enabled: false,
       span: null,
-      tracer: null as unknown as Tracer,
-      context: null,
-      // eslint-disable-next-line @typescript-eslint/no-empty-function
-      inject: () => {},
+      tracer: null,
+      context: context.active(),
+      inject: () => {
+        /* no-op */
+      },
       extract: () => context.active(),
-      startSpan: () => null as unknown as Span,
-      // eslint-disable-next-line @typescript-eslint/no-empty-function
-      endSpan: () => {},
+      startSpan: () => null,
+      endSpan: () => {
+        /* no-op */
+      },
     }
   }
 }

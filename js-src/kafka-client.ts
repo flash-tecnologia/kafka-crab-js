@@ -1,4 +1,4 @@
-import { context, trace, type Span } from '@opentelemetry/api'
+import { context, type Span, trace } from '@opentelemetry/api'
 import type { ReadableOptions } from 'node:stream'
 import {
   type ConsumerConfiguration,
@@ -147,18 +147,16 @@ export class KafkaClient {
   // eslint-disable-next-line class-methods-use-this
   private _createDisabledOtelContext(): KafkaOtelContext {
     // Provide safe no-op implementations so callers can still invoke methods without guarding
-    const tracer = trace.getTracer('kafka-crab-js-disabled')
     return {
       enabled: false,
       span: null,
-      tracer,
+      tracer: null,
       context: context.active(),
       inject: () => {
         /* no-op */
       },
       extract: () => context.active(),
-      startSpan: (name = 'noop', attributes = {}) =>
-        tracer.startSpan(name, { attributes }),
+      startSpan: () => null,
       endSpan: (span?: Span | null) => {
         if (span && typeof span.end === 'function') {
           span.end()

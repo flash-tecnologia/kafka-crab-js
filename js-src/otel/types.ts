@@ -49,7 +49,7 @@ export interface KafkaOtelContext {
   span: Span | null
 
   // Tracer instance for creating spans
-  tracer: Tracer
+  tracer: Tracer | null
 
   // Current OTEL context
   context: Context | null
@@ -61,10 +61,10 @@ export interface KafkaOtelContext {
   extract: (carrier: Record<string, string | string[] | undefined>) => Context
 
   // Create a child span with proper context
-  startSpan: (name: string, attributes?: Attributes) => Span
+  startSpan: (name: string, attributes?: Attributes) => Span | null
 
   // End a span with proper status handling
-  endSpan: (span: Span, error?: Error) => void
+  endSpan: (span: Span | null | undefined, error?: Error) => void
 }
 
 // Enhanced message interface with OTEL context
