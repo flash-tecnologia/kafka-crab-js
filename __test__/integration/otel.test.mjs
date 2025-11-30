@@ -1118,7 +1118,10 @@ describe('KafkaClient OpenTelemetry Integration', { timeout: TEST_TIMEOUT }, () 
     const operationSpans = spans.filter(s => s.name.startsWith('concurrent-op-'))
     const producerSpans = spans.filter(s => s.kind === SpanKind.PRODUCER && s.name.includes(testTopic))
 
-    assert(producerSpans.length >= concurrentCount, `Should have producer spans for all operations. Producer spans: ${producerSpans.length}, names: ${producerSpans.map(s => s.name).join(', ')}`)
+    assert(producerSpans.length >= concurrentCount,
+      `Should have producer spans for all operations. Producer spans: ${producerSpans.length}, names: ${
+        producerSpans.map(s => s.name).join(', ')
+      }`)
   })
 
   test('should propagate context through stream consumer processing', async () => {
