@@ -27,7 +27,6 @@ export {
   extractTraceContext,
   getTracer,
   injectTraceContext,
-  isOtelAvailable,
   setSpanStatus,
   shouldIgnoreTopic,
 } from './utils.js'

@@ -1,6 +1,10 @@
 import type { Attributes, Context, Span, Tracer } from '@opentelemetry/api'
-import type { InstrumentationConfig } from '@opentelemetry/instrumentation'
 import type { Message, ProducerRecord, RecordMetadata } from '../../js-binding.js'
+
+// InstrumentationConfig interface (simplified from @opentelemetry/instrumentation)
+export interface InstrumentationConfig {
+  enabled?: boolean
+}
 
 // OpenTelemetry TracerProvider interface
 export interface TracerProvider {

@@ -1,5 +1,4 @@
 import { type Attributes, context, diag, type Span, trace, type Tracer } from '@opentelemetry/api'
-import { InstrumentationBase, type InstrumentationNodeModuleDefinition } from '@opentelemetry/instrumentation'
 
 import type { KafkaConsumer, KafkaProducer, Message, ProducerRecord, RecordMetadata } from '../../js-binding.js'
 import { PACKAGE_INFO } from './constants.js'
@@ -16,21 +15,18 @@ import {
   extractTraceContext,
   getTracer,
   injectTraceContext,
-  isOtelAvailable,
   normalizeHeadersToBuffer,
   setSpanStatus,
   shouldIgnoreTopic,
 } from './utils.js'
 
-export class KafkaCrabInstrumentation extends InstrumentationBase {
+export class KafkaCrabInstrumentation {
   private _kafkaTracer: Tracer | null = null
   private _kafkaConfig: KafkaOtelInstrumentationConfig
+  private _enabled = false
 
   constructor(config: KafkaOtelInstrumentationConfig = {}) {
-    // Initialize kafka config before calling super to avoid undefined access in enable()
-    const mergedConfig = { ...DEFAULT_OTEL_CONFIG, ...config }
-    super(PACKAGE_INFO.NAME, PACKAGE_INFO.VERSION, mergedConfig)
-    this._kafkaConfig = mergedConfig
+    this._kafkaConfig = { ...DEFAULT_OTEL_CONFIG, ...config }
   }
 
   public get kafkaConfig(): KafkaOtelInstrumentationConfig {
@@ -42,28 +38,16 @@ export class KafkaCrabInstrumentation extends InstrumentationBase {
   }
 
   public updateConfig(config: KafkaOtelInstrumentationConfig): void {
-    // Merge new config with existing config
     this._kafkaConfig = { ...this._kafkaConfig, ...config }
   }
 
   public setTracerProvider(provider: TracerProvider): void {
-    // Re-initialize tracer with the new provider
     this._kafkaTracer = provider.getTracer(PACKAGE_INFO.NAME, PACKAGE_INFO.VERSION)
   }
 
-  // eslint-disable-next-line class-methods-use-this
-  protected init(): InstrumentationNodeModuleDefinition[] {
-    // We don't need module patching since we'll instrument directly
-    return []
-  }
-
   public enable(): void {
-    if (!isOtelAvailable()) {
-      diag.warn('OpenTelemetry API not available, instrumentation disabled')
-      return
-    }
-
     this._kafkaTracer = getTracer(PACKAGE_INFO.NAME, PACKAGE_INFO.VERSION)
+    this._enabled = true
 
     if (this._kafkaConfig?.registerOnInitialization && this._kafkaTracer) {
       diag.debug('Kafka OTEL instrumentation enabled')
@@ -72,15 +56,14 @@ export class KafkaCrabInstrumentation extends InstrumentationBase {
 
   public disable(): void {
     this._kafkaTracer = null
+    this._enabled = false
     diag.debug('Kafka OTEL instrumentation disabled')
   }
 
-  // Check if instrumentation is enabled and available
   public isEnabled(): boolean {
-    return this._kafkaTracer !== null && isOtelAvailable()
+    return this._enabled && this._kafkaTracer !== null
   }
 
-  // Create OTEL context for Kafka clients
   public createOtelContext(): KafkaOtelContext {
     if (!this.isEnabled()) {
       return this._createDisabledContext()
@@ -93,20 +76,17 @@ export class KafkaCrabInstrumentation extends InstrumentationBase {
       tracer: this._kafkaTracer!,
       context: context.active(),
       inject: (carrier, spanToInject?: Span) => {
-        // If a specific span is provided, use its context
         if (spanToInject) {
           const spanContext = trace.setSpan(context.active(), spanToInject)
           injectTraceContext(carrier, spanContext)
           return
         }
 
-        // Otherwise try to get the active span
         const activeSpan = trace.getActiveSpan()
         if (activeSpan) {
           const spanContext = trace.setSpan(context.active(), activeSpan)
           injectTraceContext(carrier, spanContext)
         } else {
-          // Fallback to active context
           injectTraceContext(carrier, context.active())
         }
       },
@@ -128,7 +108,6 @@ export class KafkaCrabInstrumentation extends InstrumentationBase {
     }
   }
 
-  // Instrument producer send operation
   public instrumentProducerSend(
     originalSend: Function,
     clientId?: string,
@@ -147,7 +126,6 @@ export class KafkaCrabInstrumentation extends InstrumentationBase {
         return originalSend.call(this, record as ProducerRecord)
       }
 
-      // Capture the current caller context to preserve parent relationships across async boundaries
       const callerContext = context.active()
 
       const isArrayInput = Array.isArray(record)
@@ -157,7 +135,6 @@ export class KafkaCrabInstrumentation extends InstrumentationBase {
         return originalSend.call(this, isArrayInput ? records : (record as ProducerRecord))
       }
 
-      // If every record should be ignored, bypass instrumentation altogether
       const allIgnored = records.every((currentRecord) =>
         shouldIgnoreTopic(currentRecord.topic, instrumentation._kafkaConfig.ignoreTopics)
       )
@@ -167,7 +144,6 @@ export class KafkaCrabInstrumentation extends InstrumentationBase {
       }
 
       const spans: Span[] = []
-
       const spanMetadata: { span: Span; record: ProducerRecord }[] = []
 
       const instrumentedRecords = records.map((currentRecord) => {
@@ -175,7 +151,6 @@ export class KafkaCrabInstrumentation extends InstrumentationBase {
           return currentRecord
         }
 
-        // Make producer span a child of the caller's active context
         const span = createProducerSpan(tracer, currentRecord, 'send', callerContext)
 
         if (!span) {
@@ -223,7 +198,6 @@ export class KafkaCrabInstrumentation extends InstrumentationBase {
       try {
         const result = await context.with(callerContext, async () => originalSend.call(this, payload as ProducerRecord))
 
-        // Enrich spans with delivery metadata when available
         const metadataArray = Array.isArray(result) ? result : []
         for (let idx = 0; idx < spanMetadata.length; idx++) {
           const { span } = spanMetadata[idx]
@@ -240,7 +214,6 @@ export class KafkaCrabInstrumentation extends InstrumentationBase {
           span.end()
         }
 
-        // If a producerHook is configured, invoke it with metadata for the first record
         if (instrumentation._kafkaConfig.producerHook && metadataArray.length) {
           const [first] = spanMetadata
           if (first) {
@@ -263,7 +236,6 @@ export class KafkaCrabInstrumentation extends InstrumentationBase {
     }
   }
 
-  // Instrument consumer receive operation
   public instrumentConsumerReceive(originalReceive: Function, groupId?: string): () => Promise<Message | null> {
     if (!this.isEnabled()) {
       return originalReceive as () => Promise<Message | null>
@@ -281,27 +253,21 @@ export class KafkaCrabInstrumentation extends InstrumentationBase {
         return message
       }
 
-      // Check if topic should be ignored
       if (shouldIgnoreTopic(message.topic, instrumentation._kafkaConfig.ignoreTopics)) {
         return message
       }
 
-      // Extract trace context from message headers
       const parentContext = extractTraceContext(message.headers || {}) || context.active()
-
-      // Create consumer span with extracted context
       const span = createConsumerSpan(tracer, message, 'process', parentContext)
 
       if (span) {
         const spanCtx = trace.setSpan(parentContext, span)
 
         context.with(spanCtx, () => {
-          // Add consumer group if available
           if (groupId) {
             span.setAttributes({ 'messaging.consumer.group.name': groupId })
           }
 
-          // Call message hook if configured
           if (instrumentation._kafkaConfig.messageHook) {
             try {
               instrumentation._kafkaConfig.messageHook(span, message)
@@ -310,7 +276,6 @@ export class KafkaCrabInstrumentation extends InstrumentationBase {
             }
           }
 
-          // End span immediately for receive operation
           setSpanStatus(span)
         })
 
@@ -321,7 +286,6 @@ export class KafkaCrabInstrumentation extends InstrumentationBase {
     }
   }
 
-  // Instrument batch consumer receive operation
   public instrumentBatchReceive(
     originalBatchReceive: Function,
     groupId?: string,
@@ -342,7 +306,6 @@ export class KafkaCrabInstrumentation extends InstrumentationBase {
         return messages
       }
 
-      // Filter out ignored topics
       const instrumentedMessages = messages.filter((message: Message) =>
         !shouldIgnoreTopic(message.topic, instrumentation._kafkaConfig.ignoreTopics)
       )
@@ -351,7 +314,6 @@ export class KafkaCrabInstrumentation extends InstrumentationBase {
         return messages
       }
 
-      // Create batch span; prefer extracted context, fallback to active context
       const [firstMessage] = instrumentedMessages
       const parentContext = extractTraceContext(firstMessage.headers || {}) || context.active()
       const batchSpan = createBatchSpan(
@@ -363,13 +325,11 @@ export class KafkaCrabInstrumentation extends InstrumentationBase {
       )
 
       if (batchSpan) {
-        // Add consumer group if available
         if (groupId) {
           batchSpan.setAttributes({ 'messaging.consumer.group.name': groupId })
         }
 
         try {
-          // Create individual spans for each message in the batch within parent context
           for (const message of instrumentedMessages) {
             const msgParentContext = extractTraceContext(message.headers || {}) || parentContext
             const messageSpan = createConsumerSpan(tracer, message, 'process', msgParentContext)
@@ -377,12 +337,10 @@ export class KafkaCrabInstrumentation extends InstrumentationBase {
             if (messageSpan) {
               const messageSpanContext = trace.setSpan(msgParentContext || context.active(), messageSpan)
               context.with(messageSpanContext, () => {
-                // Link to batch span
                 messageSpan.setAttributes({
                   'messaging.batch.message_count': instrumentedMessages.length,
                 })
 
-                // Call message hook if configured
                 if (instrumentation._kafkaConfig.messageHook) {
                   try {
                     instrumentation._kafkaConfig.messageHook(messageSpan, message)
@@ -436,7 +394,6 @@ export function getKafkaInstrumentation(config?: KafkaOtelInstrumentationConfig)
     globalInstrumentation = new KafkaCrabInstrumentation(config)
     globalInstrumentation.enable()
   } else if (config) {
-    // Update existing instrumentation with new configuration
     globalInstrumentation.updateConfig(config)
   }
   return globalInstrumentation

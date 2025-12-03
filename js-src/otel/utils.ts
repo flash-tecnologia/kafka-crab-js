@@ -12,21 +12,8 @@ import {
 import type { Message, ProducerRecord } from '../../js-binding.js'
 import { KAFKA_DEFAULTS, KAFKA_SEMANTIC_CONVENTIONS } from './constants.js'
 
-// Check if OpenTelemetry is available
-export function isOtelAvailable(): boolean {
-  try {
-    // Use dynamic import instead of require
-    return typeof trace !== 'undefined'
-  } catch {
-    return false
-  }
-}
-
-// Safely get tracer if OTEL is available
+// Safely get tracer
 export function getTracer(name: string, version?: string) {
-  if (!isOtelAvailable()) {
-    return null
-  }
   return trace.getTracer(name, version)
 }
 
@@ -157,7 +144,7 @@ export function injectTraceContext(
     const stringHeaders = convertBufferHeaders(bufferCarrier)
 
     propagation.inject(activeContext, stringHeaders, {
-      set: (carrier, key, value) => {
+      set: (carrier: Record<string, string | string[] | undefined>, key: string, value: string) => {
         carrier[key] = value
       },
     })
@@ -174,7 +161,7 @@ export function injectTraceContext(
   const stringCarrier = headers as Record<string, string | string[] | undefined>
 
   propagation.inject(activeContext, stringCarrier, {
-    set: (carrier, key, value) => {
+    set: (carrier: Record<string, string | string[] | undefined>, key: string, value: string) => {
       carrier[key] = value
     },
   })
@@ -207,7 +194,7 @@ export function extractTraceContext(
   headers: Record<string, string | string[] | undefined> = {},
 ): Context {
   return propagation.extract(context.active(), headers, {
-    get: (carrier, key) => {
+    get: (carrier: Record<string, string | string[] | undefined>, key: string) => {
       const value = carrier[key]
       const singleValue = Array.isArray(value) ? value[0] : value
 
@@ -217,7 +204,7 @@ export function extractTraceContext(
 
       return singleValue
     },
-    keys: (carrier) => Object.keys(carrier),
+    keys: (carrier: Record<string, string | string[] | undefined>) => Object.keys(carrier),
   })
 }
 

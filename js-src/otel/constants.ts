@@ -50,5 +50,5 @@ export const KAFKA_DEFAULTS = {
 // Package information
 export const PACKAGE_INFO = {
   NAME: 'kafka-crab-js',
-  VERSION: '2.0.1', // Should match package.json
+  VERSION: '2.1.0', // Should match package.json
 } as const
