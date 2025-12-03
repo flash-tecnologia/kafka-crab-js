@@ -1,6 +1,6 @@
 {
   "name": "kafka-crab-js",
-  "version": "2.1.0-alpha.1",
+  "version": "2.1.0-alpha.2",
   "type": "module",
   "engines": {
     "node": ">=20"
@@ -69,9 +69,9 @@
     "fmt": "dprint fmt",
     "lint": "oxlint ."
   },
-  "packageManager": "pnpm@10.23.0",
+  "packageManager": "pnpm@10.24.0",
   "dependencies": {
-    "@napi-rs/cli": "^3.4.1"
+    "@napi-rs/cli": "^3.5.0"
   },
   "optionalDependencies": {
     "@opentelemetry/api": "^1.9.0",
@@ -88,7 +88,7 @@
     "dprint": "^0.50.2",
     "esbuild": "^0.27.0",
     "nanoid": "^5.1.6",
-    "oxlint": "^1.30.0",
+    "oxlint": "^1.31.0",
     "rimraf": "^6.1.2",
     "typescript": "^5.9.3"
   }

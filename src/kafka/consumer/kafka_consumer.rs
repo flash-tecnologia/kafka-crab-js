@@ -466,4 +466,19 @@ impl KafkaConsumer {
 
     Ok(())
   }
+
+  /// Commits the offset for a message.
+  /// This is a convenience method that automatically increments the offset by 1.
+  /// The offset committed is `message.offset + 1` since Kafka expects the next offset to be consumed.
+  #[napi]
+  pub async fn commit_message(&self, message: Message, commit: CommitMode) -> Result<()> {
+    self
+      .commit(
+        message.topic.clone(),
+        message.partition,
+        message.offset + 1,
+        commit,
+      )
+      .await
+  }
 }

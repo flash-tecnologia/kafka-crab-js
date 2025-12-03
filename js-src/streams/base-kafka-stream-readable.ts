@@ -1,6 +1,6 @@
 import { Readable, type ReadableOptions } from 'node:stream'
 
-import type { CommitMode, KafkaConsumer, OffsetModel, TopicPartitionConfig } from '../../js-binding.js'
+import type { CommitMode, KafkaConsumer, Message, OffsetModel, TopicPartitionConfig } from '../../js-binding.js'
 
 export interface KafkaStreamReadableOptions extends ReadableOptions<Readable> {
   kafkaConsumer: KafkaConsumer
@@ -58,6 +58,17 @@ export abstract class BaseKafkaStreamReadable extends Readable {
 
   async commit(topic: string, partition: number, offset: number, commitMode: CommitMode) {
     return this.kafkaConsumer.commit(topic, partition, offset, commitMode)
+  }
+
+  /**
+   * Commits the offset for a message.
+   * This is a convenience method that automatically increments the offset by 1.
+   * The offset committed is `message.offset + 1` since Kafka expects the next offset to be consumed.
+   * @param message - The message to commit
+   * @param commitMode - The commit mode ('Sync' or 'Async')
+   */
+  async commitMessage(message: Message, commitMode: CommitMode) {
+    return this.kafkaConsumer.commitMessage(message, commitMode)
   }
 
   /**

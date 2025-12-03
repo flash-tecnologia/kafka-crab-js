@@ -29,6 +29,12 @@ export declare class KafkaConsumer {
    */
   recvBatch(size: number, timeoutMs: number): Promise<Array<Message>>
   commit(topic: string, partition: number, offset: number, commit: CommitMode): Promise<void>
+  /**
+   * Commits the offset for a message.
+   * This is a convenience method that automatically increments the offset by 1.
+   * The offset committed is `message.offset + 1` since Kafka expects the next offset to be consumed.
+   */
+  commitMessage(message: Message, commit: CommitMode): Promise<void>
 }
 
 export declare class KafkaProducer {
