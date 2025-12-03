@@ -10,6 +10,44 @@ A lightweight, flexible, and reliable Kafka client for JavaScript/TypeScript. It
 
 ---
 
+## What's New in Version 2.1.0
+
+### New Features
+
+1. **Simplified Message Commits with `commitMessage()`**:
+   - New convenience method that accepts a message and commit mode directly
+   - Automatically handles `offset + 1` increment internally - no more manual offset arithmetic
+   - Available on both `KafkaConsumer` and stream consumers
+   - **Before** (v2.0.0):
+     ```javascript
+     const message = await consumer.recv();
+     await consumer.commit(message.topic, message.partition, message.offset + 1, 'Sync');
+     ```
+   - **After** (v2.1.0):
+     ```javascript
+     const message = await consumer.recv();
+     await consumer.commitMessage(message, 'Sync');
+     ```
+
+2. **Enhanced OpenTelemetry Support**:
+   - Improved OTEL context propagation for better distributed tracing
+   - Safe handling when OTEL SDK is not installed (no-op behavior)
+   - Better span context management across producer and consumer operations
+   - Seamless integration with standard OTEL SDK setup
+
+3. **CI/CD Improvements**:
+   - Updated to Node.js 24 support
+   - GitHub Actions updated to v6
+   - Improved caching with actions/cache v4
+
+### Migration from 2.0.x
+
+- **No breaking changes** - all existing code continues to work
+- The new `commitMessage()` method is additive - existing `commit()` calls remain valid
+- OTEL improvements are transparent and require no code changes
+
+---
+
 ## What's New in Version 2.0.0
 
 ### BREAKING CHANGES ⚠️
@@ -179,8 +217,12 @@ async function run() {
     value: payload.toString()
   });
 
-  // Manual commit (v1.8.0+: now requires await)
-  await consumer.commit(topic, partition, offset + 1, 'Sync');
+  // Manual commit - two options:
+  // Option 1 (v2.1.0+): Simplified with commitMessage
+  await consumer.commitMessage(message, 'Sync');
+  
+  // Option 2: Traditional commit with manual offset increment
+  // await consumer.commit(topic, partition, offset + 1, 'Sync');
 
   consumer.unsubscribe();
 }
@@ -480,6 +522,27 @@ You can find some examples on the [example](https://github.com/flash-tecnologia/
 | `configuration` | `Record<string, any>` | `{}` | Additional consumer configuration options |
 | `fetchMetadataTimeout` | `number` | `60000` | Timeout for fetching metadata (ms) |
 | `maxBatchMessages` | `number` | `1000` | Maximum messages in a batch operation |
+
+### Consumer Commit Methods
+
+kafka-crab-js provides two methods for committing offsets:
+
+| Method | Signature | Description |
+| --- | --- | --- |
+| `commit` | `commit(topic, partition, offset, mode)` | Traditional commit - you must calculate `offset + 1` |
+| `commitMessage` | `commitMessage(message, mode)` | **v2.1.0+**: Simplified commit - automatically handles offset increment |
+
+```javascript
+// Using commitMessage (recommended for v2.1.0+)
+const message = await consumer.recv();
+await consumer.commitMessage(message, 'Sync');
+
+// Using commit (traditional)
+const message = await consumer.recv();
+await consumer.commit(message.topic, message.partition, message.offset + 1, 'Sync');
+```
+
+Both methods support `'Sync'` and `'Async'` commit modes.
 
 ### ProducerConfiguration
 
