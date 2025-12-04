@@ -24,6 +24,9 @@ const kafkaClient = new KafkaClient({
   configuration: {
     'auto.offset.reset': 'earliest',
   },
+  otel: {
+    serviceName: 'my-app-service',
+  },
 });
 ```
 
@@ -127,6 +130,51 @@ async function streamConsumer() {
     kafkaStream.unsubscribe();
   });
 }
+
+### Enabling OpenTelemetry Instrumentation
+
+Kafka Crab JS provides built-in OpenTelemetry support for producers, consumers, and stream consumers.
+
+```typescript
+import { NodeTracerProvider } from '@opentelemetry/sdk-trace-node'
+import { SimpleSpanProcessor } from '@opentelemetry/sdk-trace-base'
+import { AsyncHooksContextManager } from '@opentelemetry/context-async-hooks'
+import { context } from '@opentelemetry/api'
+
+const provider = new NodeTracerProvider()
+provider.addSpanProcessor(new SimpleSpanProcessor(exporter))
+provider.register()
+
+context.setGlobalContextManager(new AsyncHooksContextManager().enable())
+
+const client = new KafkaClient({
+  brokers: 'localhost:9092',
+  clientId: 'otel-example',
+  otel: {
+    serviceName: 'otel-example-service',
+    messageHook: (span, message) => {
+      span.setAttribute('app.message.topic', message.topic)
+    },
+  },
+})
+
+const producer = client.createProducer()
+await producer.send({
+  topic: 'otel-topic',
+  messages: [{
+    payload: Buffer.from('hello world'),
+    headers: { 'custom-header': 'value' },
+  }],
+})
+
+const consumer = client.createConsumer({ groupId: 'otel-group', enableAutoCommit: false })
+await consumer.subscribe([{ topic: 'otel-topic', allOffsets: { position: 'Beginning' } }])
+const message = await consumer.recv()
+
+console.log(message.headers?.['custom-header']?.toString()) // -> value
+```
+
+Instrumentation automatically injects trace context (`traceparent`/`tracestate`) while preserving custom headers (Buffer/string). Set `otel: false` if you need to turn tracing off.
 ```
 
 ### Consumer with Events Handling

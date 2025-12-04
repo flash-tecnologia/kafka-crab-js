@@ -3,8 +3,7 @@
   "include": [
     "benchmark/*.ts",
     "js-src/*.ts",
-    "test/**/*.ts",
-    "__test/**/*.ts",
+    "__test__/**/*.*",
     "examples/**/*.ts"
   ]
 }

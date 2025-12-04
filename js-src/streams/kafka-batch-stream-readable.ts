@@ -50,6 +50,9 @@ export class KafkaBatchStreamReadable extends BaseKafkaStreamReadable {
    * @private
    */
   async _read() {
+    if (this.destroyed) {
+      return
+    }
     try {
       // First, push any pending messages
       while (this.pendingMessages.length > 0) {
@@ -63,7 +66,10 @@ export class KafkaBatchStreamReadable extends BaseKafkaStreamReadable {
       const messages = await this.kafkaConsumer.recvBatch(this.batchSize, this.batchTimeout)
 
       if (messages.length === 0) {
-        this.push(null) // No more data, end of stream
+        // No data this poll; schedule another read instead of ending the stream
+        if (!this.destroyed) {
+          setImmediate(() => this._read())
+        }
         return
       }
 

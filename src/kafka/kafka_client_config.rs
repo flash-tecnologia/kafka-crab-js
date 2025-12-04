@@ -83,6 +83,9 @@ pub struct KafkaClientConfig {
 
 #[napi]
 impl KafkaClientConfig {
+  /// Creates a new KafkaClientConfig with the provided configuration.
+  /// This is the main entry point for creating Kafka producers and consumers.
+  /// @param kafkaConfiguration - The Kafka client configuration options
   #[napi(constructor)]
   pub fn new(kafka_configuration: KafkaConfiguration) -> Self {
     // Initialize tracing once globally to prevent "global default trace dispatcher already set" errors
@@ -138,6 +141,8 @@ impl KafkaClientConfig {
     }
   }
 
+  /// Returns the current Kafka configuration.
+  /// This is exposed as a readonly property 'kafkaConfiguration' in JavaScript.
   #[napi(getter)] // Expose this as a property named 'kafkaConfiguration' in JS
   pub fn configuration(&self) -> KafkaConfiguration {
     // Return a clone. Since KafkaConfiguration derives Clone and has
@@ -145,6 +150,9 @@ impl KafkaClientConfig {
     self.kafka_configuration.clone()
   }
 
+  /// Creates a new Kafka producer with the specified configuration.
+  /// @param producerConfiguration - The producer-specific configuration options
+  /// @returns A new KafkaProducer instance
   #[napi]
   pub fn create_producer(
     &self,
@@ -156,6 +164,10 @@ impl KafkaClientConfig {
     }
   }
 
+  /// Creates a new Kafka consumer with the specified configuration.
+  /// The consumer must be subscribed to topics before receiving messages.
+  /// @param consumerConfiguration - The consumer-specific configuration options
+  /// @returns A new KafkaConsumer instance
   #[napi(async_runtime)]
   pub fn create_consumer(
     &self,

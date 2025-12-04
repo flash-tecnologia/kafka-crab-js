@@ -3,7 +3,7 @@ use rdkafka::{
   error::KafkaResult,
   ClientContext, TopicPartitionList,
 };
-use tokio::sync::watch;
+use tokio::sync::broadcast;
 use tracing::{debug, warn};
 
 use crate::kafka::consumer::consumer_helper::convert_tpl_to_array_of_topic_partition;
@@ -11,8 +11,8 @@ use crate::kafka::consumer::consumer_helper::convert_tpl_to_array_of_topic_parti
 use super::model::TopicPartition;
 
 pub type TxRxContext = (
-  watch::Sender<Option<KafkaEvent>>,
-  watch::Receiver<Option<KafkaEvent>>,
+  broadcast::Sender<KafkaEvent>,
+  broadcast::Receiver<KafkaEvent>,
 );
 
 pub type LoggingConsumer = StreamConsumer<KafkaCrabContext>;
@@ -46,18 +46,21 @@ pub struct KafkaCrabContext {
 
 impl KafkaCrabContext {
   pub fn new() -> Self {
-    let (tx, rx) = watch::channel(None);
+    // Bounded channel to preserve ordering while avoiding unbounded growth
+    let (tx, rx) = broadcast::channel(100);
     KafkaCrabContext {
       event_channel: (tx, rx),
     }
   }
 
   fn send_event(&self, event: KafkaEvent) {
-    // Attempt to send event - watch channels replace the current value, so no unbounded growth
-    if let Err(err) = self.event_channel.0.send(Some(event)) {
-      // Log at debug level rather than error since receiver disconnection during shutdown is normal
-      warn!("Event channel send failed (likely no receivers): {:?}", err);
-    }
+    // Use try_send to avoid blocking; drop with warning if buffer is full
+    if let Err(err) = self.event_channel.0.send(event) {
+      warn!(
+        "Event channel send failed (buffer full or closed): {:?}",
+        err
+      );
+    };
   }
 }
 

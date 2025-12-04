@@ -10,6 +10,44 @@ A lightweight, flexible, and reliable Kafka client for JavaScript/TypeScript. It
 
 ---
 
+## What's New in Version 2.1.0
+
+### New Features
+
+1. **Simplified Message Commits with `commitMessage()`**:
+   - New convenience method that accepts a message and commit mode directly
+   - Automatically handles `offset + 1` increment internally - no more manual offset arithmetic
+   - Available on both `KafkaConsumer` and stream consumers
+   - **Before** (v2.0.0):
+     ```javascript
+     const message = await consumer.recv();
+     await consumer.commit(message.topic, message.partition, message.offset + 1, 'Sync');
+     ```
+   - **After** (v2.1.0):
+     ```javascript
+     const message = await consumer.recv();
+     await consumer.commitMessage(message, 'Sync');
+     ```
+
+2. **Enhanced OpenTelemetry Support**:
+   - Improved OTEL context propagation for better distributed tracing
+   - Safe handling when OTEL SDK is not installed (no-op behavior)
+   - Better span context management across producer and consumer operations
+   - Seamless integration with standard OTEL SDK setup
+
+3. **CI/CD Improvements**:
+   - Updated to Node.js 24 support
+   - GitHub Actions updated to v6
+   - Improved caching with actions/cache v4
+
+### Migration from 2.0.x
+
+- **No breaking changes** - all existing code continues to work
+- The new `commitMessage()` method is additive - existing `commit()` calls remain valid
+- OTEL improvements are transparent and require no code changes
+
+---
+
 ## What's New in Version 2.0.0
 
 ### BREAKING CHANGES ⚠️
@@ -23,7 +61,7 @@ This major version includes important breaking changes that improve API consiste
    - **After**: `consumer.subscribe([{ topic: 'my-topic', createTopic: true }])`
 
 2. **Stream Lifecycle Management**:
-   - Stream consumers now properly implement Node.js stream lifecycle methods (`_destroy()`, `_final()`)
+   - Stream consumers now properly implement Node.js stream lifecycle methods (`_destroy()`)
    - **Memory leak prevention**: Streams now automatically disconnect Kafka consumers during destruction
    - Better resource cleanup ensures no hanging connections or memory leaks
    - Error handling during stream destruction is improved with proper error propagation
@@ -128,6 +166,7 @@ This major version includes important breaking changes that improve API consiste
 8. [Best Practices](#best-practices)
 9. [Contributing](#contributing)
 10. [License](#license)
+11. [OpenTelemetry Instrumentation](#opentelemetry-instrumentation)
 
 ## Installation
 
@@ -178,8 +217,12 @@ async function run() {
     value: payload.toString()
   });
 
-  // Manual commit (v1.8.0+: now requires await)
-  await consumer.commit(topic, partition, offset + 1, 'Sync');
+  // Manual commit - two options:
+  // Option 1 (v2.1.0+): Simplified with commitMessage
+  await consumer.commitMessage(message, 'Sync');
+  
+  // Option 2: Traditional commit with manual offset increment
+  // await consumer.commit(topic, partition, offset + 1, 'Sync');
 
   consumer.unsubscribe();
 }
@@ -468,6 +511,7 @@ You can find some examples on the [example](https://github.com/flash-tecnologia/
 | `logLevel` | `string` | `info`  | Log level for the client |
 | `brokerAddressFamily` | `string` | `"v4"` | Address family to use for the connection (v4, v6) |
 | `configuration` | `Record<string, any>` | `{}` | Additional configuration options for the client. **v2.0.0+**: Now supports any value type (string, number, boolean, object) |
+| `otel` | `KafkaOtelInstrumentationConfig \| false` | `undefined` | Enable and configure OpenTelemetry instrumentation (see [OpenTelemetry Instrumentation](#opentelemetry-instrumentation)) |
 
 ### ConsumerConfiguration
 
@@ -478,6 +522,27 @@ You can find some examples on the [example](https://github.com/flash-tecnologia/
 | `configuration` | `Record<string, any>` | `{}` | Additional consumer configuration options |
 | `fetchMetadataTimeout` | `number` | `60000` | Timeout for fetching metadata (ms) |
 | `maxBatchMessages` | `number` | `1000` | Maximum messages in a batch operation |
+
+### Consumer Commit Methods
+
+kafka-crab-js provides two methods for committing offsets:
+
+| Method | Signature | Description |
+| --- | --- | --- |
+| `commit` | `commit(topic, partition, offset, mode)` | Traditional commit - you must calculate `offset + 1` |
+| `commitMessage` | `commitMessage(message, mode)` | **v2.1.0+**: Simplified commit - automatically handles offset increment |
+
+```javascript
+// Using commitMessage (recommended for v2.1.0+)
+const message = await consumer.recv();
+await consumer.commitMessage(message, 'Sync');
+
+// Using commit (traditional)
+const message = await consumer.recv();
+await consumer.commit(message.topic, message.partition, message.offset + 1, 'Sync');
+```
+
+Both methods support `'Sync'` and `'Async'` commit modes.
 
 ### ProducerConfiguration
 
@@ -499,6 +564,30 @@ You can find some examples on the [example](https://github.com/flash-tecnologia/
 | `replicas` | `number` | `1` | **v2.0.0+**: Number of replicas when creating topic |
 
 You can see the available options here: [librdkafka](https://docs.confluent.io/platform/current/clients/librdkafka/html/md_CONFIGURATION.html).
+
+### OpenTelemetry Configuration
+
+OpenTelemetry is enabled by default when the `otel` field is omitted or set to an object. Set `otel: false` to disable instrumentation entirely.
+
+```ts
+const client = new KafkaClient({
+  brokers: 'localhost:29092',
+  clientId: 'payments-service',
+  otel: {
+    serviceName: 'payments-api',
+    ignoreTopics: topic => topic.startsWith('internal.'),
+    messageHook: (span, message) => {
+      span.setAttribute('app.message.key', message.key?.toString('utf8'))
+    },
+  },
+})
+```
+
+When instrumentation is active:
+
+- Producer `send` calls automatically propagate the active span context via Kafka headers while preserving custom headers and their Buffer/string types.
+- Consumer `recv`, `recvBatch`, and stream consumers generate spans that capture consumer group, topic, partition, offset, and batch size.
+- Hooks registered through `messageHook` and `producerHook` execute within the active span context so that additional attributes/events can be attached safely.
 
 ## Performance Benchmarks
 
@@ -624,6 +713,60 @@ pnpm fmt
 npx tsx benchmark/utils/setup.ts
 npx tsx benchmark/consumer.ts
 ```
+
+## OpenTelemetry Instrumentation
+
+Kafka Crab JS offers turnkey tracing for Kafka workloads:
+
+- **Seamless propagation** – Producer instrumentation injects `traceparent`/`tracestate` into Kafka headers while retaining any existing headers (including `Buffer` values) so downstream systems continue to see custom metadata.
+- **Consumer & stream coverage** – Standard consumers, batch consumers, and `createStreamConsumer` streams emit spans that include consumer group, topic, partition, offset, and batch size semantics.
+- **Hook-friendly spans** – Both `messageHook` and `producerHook` callbacks run inside the active span context, simplifying attribute decoration or error handling.
+- **Header normalization helpers** – The runtime automatically normalizes mixed header carriers to Buffers when talking to the native binding, removing the need for manual conversions.
+
+### Minimal Setup Example
+
+```ts
+import { KafkaClient } from 'kafka-crab-js'
+import { NodeTracerProvider } from '@opentelemetry/sdk-trace-node'
+import { SimpleSpanProcessor } from '@opentelemetry/sdk-trace-base'
+import { AsyncHooksContextManager } from '@opentelemetry/context-async-hooks'
+import { context } from '@opentelemetry/api'
+
+const provider = new NodeTracerProvider()
+provider.addSpanProcessor(new SimpleSpanProcessor(exporter))
+provider.register()
+
+context.setGlobalContextManager(new AsyncHooksContextManager().enable())
+
+const client = new KafkaClient({
+  brokers: 'localhost:29092',
+  clientId: 'orders-api',
+  otel: {
+    serviceName: 'orders-service',
+    producerHook: span => span.setAttribute('messaging.client.kind', 'producer'),
+  },
+})
+
+const producer = client.createProducer()
+await producer.send({
+  topic: 'orders',
+  messages: [{
+    payload: Buffer.from(JSON.stringify({ orderId: '123' })),
+    headers: { 'custom-header': 'foo' },
+  }],
+})
+
+const consumer = client.createStreamConsumer({
+  groupId: 'orders-consumer',
+  enableAutoCommit: false,
+})
+
+consumer.on('data', message => {
+  console.log(message.headers?.['custom-header']?.toString())
+})
+```
+
+Set `otel: false` in the client configuration to opt-out.
 
 ## License
 

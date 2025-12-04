@@ -127,6 +127,8 @@ TEST_FILES=(
     "consumer-manual-commit.test.mjs"
     "consumer-stream-batch.test.mjs"
     "batch-size-limits.test.mjs"
+    "stream-cleanup.test.mjs"
+    "otel.test.mjs"
 )
 
 PASSED_TESTS=0

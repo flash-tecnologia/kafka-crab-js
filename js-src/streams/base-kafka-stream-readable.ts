@@ -1,6 +1,6 @@
 import { Readable, type ReadableOptions } from 'node:stream'
 
-import type { CommitMode, KafkaConsumer, OffsetModel, TopicPartitionConfig } from '../../js-binding.js'
+import type { CommitMode, KafkaConsumer, Message, OffsetModel, TopicPartitionConfig } from '../../js-binding.js'
 
 export interface KafkaStreamReadableOptions extends ReadableOptions<Readable> {
   kafkaConsumer: KafkaConsumer
@@ -61,6 +61,17 @@ export abstract class BaseKafkaStreamReadable extends Readable {
   }
 
   /**
+   * Commits the offset for a message.
+   * This is a convenience method that automatically increments the offset by 1.
+   * The offset committed is `message.offset + 1` since Kafka expects the next offset to be consumed.
+   * @param message - The message to commit
+   * @param commitMode - The commit mode ('Sync' or 'Async')
+   */
+  async commitMessage(message: Message, commitMode: CommitMode) {
+    return this.kafkaConsumer.commitMessage(message, commitMode)
+  }
+
+  /**
    * Unsubscribe from topics
    */
   unsubscribe() {
@@ -111,20 +122,6 @@ export abstract class BaseKafkaStreamReadable extends Readable {
           : disconnectError
         callback(combinedError)
       })
-  }
-
-  /**
-   * Called when the stream is finishing (no more data will be written)
-   * Ensures proper cleanup when stream ends normally
-   * @private
-   */
-  _final(callback: (error?: Error | null) => void): void {
-    // For readable streams, _final is called when we push(null)
-    // Ensure consumer is properly cleaned up
-    this.kafkaConsumer
-      .disconnect()
-      .then(() => callback())
-      .catch((error) => callback(error))
   }
 
   /**
