@@ -148,11 +148,17 @@ impl KafkaProducer {
     })
   }
 
+  /// Returns the number of messages that are currently in-flight (sent but not yet acknowledged).
+  /// This can be used to implement backpressure or monitor producer health.
   #[napi]
   pub fn in_flight_count(&self) -> Result<i32> {
     Ok(self.producer.in_flight_count())
   }
 
+  /// Flushes all pending messages to the Kafka broker and waits for delivery confirmation.
+  /// When autoFlush is enabled (default), this returns an empty array as messages are flushed automatically.
+  /// When autoFlush is disabled, this must be called manually to send buffered messages.
+  /// @returns Array of RecordMetadata for each delivered message
   #[napi]
   pub async fn flush(&self) -> Result<Vec<RecordMetadata>> {
     if self.auto_flush {
@@ -162,6 +168,10 @@ impl KafkaProducer {
     }
   }
 
+  /// Sends one or more messages to a Kafka topic.
+  /// Messages are sent asynchronously and delivery is confirmed based on the autoFlush setting.
+  /// @param producerRecord - The record containing the topic and messages to send
+  /// @returns Array of RecordMetadata for each delivered message (empty if autoFlush is disabled)
   #[napi]
   pub async fn send(&self, producer_record: ProducerRecord) -> Result<Vec<RecordMetadata>> {
     let topic = producer_record.topic.as_str();

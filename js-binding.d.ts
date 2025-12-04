@@ -1,7 +1,27 @@
 export declare class KafkaClientConfig {
+  /**
+   * Creates a new KafkaClientConfig with the provided configuration.
+   * This is the main entry point for creating Kafka producers and consumers.
+   * @param kafkaConfiguration - The Kafka client configuration options
+   */
   constructor(kafkaConfiguration: KafkaConfiguration)
+  /**
+   * Returns the current Kafka configuration.
+   * This is exposed as a readonly property 'kafkaConfiguration' in JavaScript.
+   */
   get configuration(): KafkaConfiguration
+  /**
+   * Creates a new Kafka producer with the specified configuration.
+   * @param producerConfiguration - The producer-specific configuration options
+   * @returns A new KafkaProducer instance
+   */
   createProducer(producerConfiguration: ProducerConfiguration): KafkaProducer
+  /**
+   * Creates a new Kafka consumer with the specified configuration.
+   * The consumer must be subscribed to topics before receiving messages.
+   * @param consumerConfiguration - The consumer-specific configuration options
+   * @returns A new KafkaConsumer instance
+   */
   createConsumer(consumerConfiguration: ConsumerConfiguration): KafkaConsumer
 }
 
@@ -94,8 +114,24 @@ export declare class KafkaConsumer {
 }
 
 export declare class KafkaProducer {
+  /**
+   * Returns the number of messages that are currently in-flight (sent but not yet acknowledged).
+   * This can be used to implement backpressure or monitor producer health.
+   */
   inFlightCount(): number
+  /**
+   * Flushes all pending messages to the Kafka broker and waits for delivery confirmation.
+   * When autoFlush is enabled (default), this returns an empty array as messages are flushed automatically.
+   * When autoFlush is disabled, this must be called manually to send buffered messages.
+   * @returns Array of RecordMetadata for each delivered message
+   */
   flush(): Promise<Array<RecordMetadata>>
+  /**
+   * Sends one or more messages to a Kafka topic.
+   * Messages are sent asynchronously and delivery is confirmed based on the autoFlush setting.
+   * @param producerRecord - The record containing the topic and messages to send
+   * @returns Array of RecordMetadata for each delivered message (empty if autoFlush is disabled)
+   */
   send(producerRecord: ProducerRecord): Promise<Array<RecordMetadata>>
 }
 
