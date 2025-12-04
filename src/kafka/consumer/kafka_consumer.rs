@@ -103,11 +103,13 @@ impl KafkaConsumer {
     })
   }
 
+  /// Returns the current consumer configuration.
   #[napi]
   pub fn get_config(&self) -> Result<ConsumerConfiguration> {
     Ok(self.consumer_config.clone())
   }
 
+  /// Returns the list of topics and partitions currently subscribed to.
   #[napi]
   pub fn get_subscription(&self) -> Result<Vec<TopicPartition>> {
     match self.stream_consumer.subscription() {
@@ -116,6 +118,9 @@ impl KafkaConsumer {
     }
   }
 
+  /// Registers a callback to receive Kafka consumer events (rebalance, errors, etc.).
+  /// The callback will be invoked for each event until the consumer is disconnected.
+  /// @param callback - Function called with each event
   #[napi(
     async_runtime,
     ts_args_type = "callback: (error: Error | undefined, event: KafkaEvent) => void"
@@ -152,6 +157,10 @@ impl KafkaConsumer {
     Ok(())
   }
 
+  /// Subscribes to one or more Kafka topics.
+  /// Can accept either a single topic name string or an array of topic configurations
+  /// with advanced options like partition offsets and topic creation settings.
+  /// @param topicConfigs - Topic name string or array of TopicPartitionConfig objects
   #[napi]
   pub async fn subscribe(
     &self,
@@ -251,6 +260,8 @@ impl KafkaConsumer {
     Ok(partitions)
   }
 
+  /// Pauses message consumption on all assigned partitions.
+  /// Messages will be buffered by the broker until resume() is called.
   #[napi]
   pub fn pause(&self) -> Result<()> {
     self
@@ -260,6 +271,7 @@ impl KafkaConsumer {
     Ok(())
   }
 
+  /// Resumes message consumption on all assigned partitions after a pause.
   #[napi]
   pub fn resume(&self) -> Result<()> {
     self
@@ -269,6 +281,8 @@ impl KafkaConsumer {
     Ok(())
   }
 
+  /// Unsubscribes from all currently subscribed topics.
+  /// After calling this method, the consumer will no longer receive messages.
   #[napi]
   pub fn unsubscribe(&self) -> Result<()> {
     info!("Unsubscribing from topics");
@@ -276,6 +290,9 @@ impl KafkaConsumer {
     Ok(())
   }
 
+  /// Disconnects the consumer from the Kafka broker.
+  /// This will unsubscribe from all topics and stop receiving messages.
+  /// Any pending recv() or recvBatch() calls will return immediately.
   #[napi]
   pub async fn disconnect(&self) -> Result<()> {
     info!("Disconnecting consumer - This will stop the consumer from receiving messages");
@@ -296,6 +313,12 @@ impl KafkaConsumer {
     Ok(())
   }
 
+  /// Seeks to a specific offset on a topic partition.
+  /// This allows repositioning the consumer to read from a specific point.
+  /// @param topic - The topic name
+  /// @param partition - The partition number
+  /// @param offsetModel - The offset to seek to (Beginning, End, Offset, or Stored)
+  /// @param timeout - Optional timeout in milliseconds (default: 1500ms, max: 300000ms)
   #[napi]
   pub fn seek(
     &self,
@@ -321,6 +344,9 @@ impl KafkaConsumer {
     Ok(())
   }
 
+  /// Returns the current partition assignment for this consumer.
+  /// This includes all topic partitions that have been assigned to this consumer
+  /// as part of the consumer group rebalancing.
   #[napi]
   pub fn assignment(&self) -> Result<Vec<TopicPartition>> {
     let assignment = self
@@ -330,6 +356,9 @@ impl KafkaConsumer {
     Ok(convert_tpl_to_array_of_topic_partition(&assignment))
   }
 
+  /// Receives a single message from the subscribed topics.
+  /// This method will block until a message is available or the consumer is disconnected.
+  /// @returns The received message, or null if the consumer was disconnected
   #[napi]
   pub async fn recv(&self) -> Result<Option<Message>> {
     let mut rx = self.disconnect_signal.1.clone();
@@ -428,6 +457,13 @@ impl KafkaConsumer {
     Ok(messages)
   }
 
+  /// Commits an offset for a specific topic partition.
+  /// This marks the offset as processed, so the consumer will not receive
+  /// messages before this offset after a restart.
+  /// @param topic - The topic name
+  /// @param partition - The partition number
+  /// @param offset - The offset to commit
+  /// @param commit - The commit mode (Sync or Async)
   #[napi]
   pub async fn commit(
     &self,
@@ -470,6 +506,8 @@ impl KafkaConsumer {
   /// Commits the offset for a message.
   /// This is a convenience method that automatically increments the offset by 1.
   /// The offset committed is `message.offset + 1` since Kafka expects the next offset to be consumed.
+  /// @param message - The message to commit
+  /// @param commit - The commit mode (Sync or Async)
   #[napi]
   pub async fn commit_message(&self, message: Message, commit: CommitMode) -> Result<()> {
     self
