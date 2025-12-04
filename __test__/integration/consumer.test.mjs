@@ -317,7 +317,7 @@ await test('Consumer Integration Tests', async (t) => {
       // This should work without creating the topic (will fail if topic doesn't exist)
       await consumerDisabled.subscribe(testTopicName)
       console.log('Topic creation disabled - subscription succeeded without creating topic')
-    } catch (error) {
+    } catch {
       console.log('Topic creation disabled - subscription failed as expected when topic does not exist')
     } finally {
       await cleanupConsumer(consumerDisabled)

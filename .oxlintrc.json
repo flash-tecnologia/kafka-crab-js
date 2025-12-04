@@ -1,10 +1,5 @@
 {
   "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": [
-    "unicorn",
-    "typescript",
-    "oxc"
-  ],
   "env": {
     "node": true,
     "builtin": true,
@@ -73,13 +68,12 @@
     ]
   },
   "ignorePatterns": [
-    "*.mjs",
     "dist/",
     "coverage/",
     "report/",
-    "**/*.mjs",
     "**/dist/**",
-    "js-binding*.*"
+    "js-binding*.*",
+    "build.mjs"
   ],
   "globals": {
     "__dirname": "off",
@@ -104,9 +98,25 @@
         "no-undefined": "off",
         "no-async-await": "off",
         "no-console": "allow",
-        "eslint/no-await-in-loop": "off",
-        "unicorn/no-await-expression-member": "off",
-        "unicorn/consistent-function-scoping": "off"
+        "no-continue": "allow",
+        "no-new": "allow",
+        "curly": "allow",
+        "prefer-destructuring": "allow",
+        "prefer-template": "allow",
+        "arrow-body-style": "allow",
+        "eslint/no-await-in-loop": "allow",
+        "unicorn/no-await-expression-member": "allow",
+        "unicorn/consistent-function-scoping": "allow",
+        "unicorn/numeric-separators-style": "allow",
+        "unicorn/prefer-optional-catch-binding": "allow",
+        "unicorn/catch-error-name": "allow",
+        "unicorn/no-array-for-each": "allow",
+        "unicorn/no-array-reduce": "allow",
+        "unicorn/prefer-spread": "allow",
+        "unicorn/prefer-array-index-of": "allow",
+        "unicorn/no-console-spaces": "allow",
+        "no-empty-function": "allow",
+        "no-async-promise-executor": "allow"
       }
     }
   ]

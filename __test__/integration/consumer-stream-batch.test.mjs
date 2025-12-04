@@ -1,7 +1,7 @@
 import { strict as assert } from 'node:assert'
 import { test } from 'node:test'
 import { KafkaClient } from '../../dist/index.js'
-import { cleanupConsumer, createConsumerConfig, createTestMessages, createTestTopic, TEST_CONFIG } from './utils.mjs'
+import { cleanupConsumer, createConsumerConfig, createTestTopic, TEST_CONFIG } from './utils.mjs'
 
 test('Consumer Stream Batch Mode Integration Tests', async (t) => {
   const client = new KafkaClient(TEST_CONFIG)

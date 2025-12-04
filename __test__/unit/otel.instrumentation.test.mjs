@@ -37,7 +37,7 @@ function teardownOtelProvider({ contextManager, exporter, provider }) {
   provider.shutdown().catch(() => {})
 }
 
-test('producer spans propagate context to consumer spans via Kafka headers', async (t) => {
+test('producer spans propagate context to consumer spans via Kafka headers', async () => {
   const otel = setupOtelProvider()
 
   const instrumentation = new KafkaCrabInstrumentation()
@@ -114,7 +114,7 @@ test('producer spans propagate context to consumer spans via Kafka headers', asy
   teardownOtelProvider(otel)
 })
 
-test('createStreamConsumer instruments underlying consumer when OTEL is enabled', async (t) => {
+test('createStreamConsumer instruments underlying consumer when OTEL is enabled', async () => {
   resetKafkaInstrumentation()
 
   const originalCreateConsumer = KafkaClientConfig.prototype.createConsumer

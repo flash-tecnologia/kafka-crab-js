@@ -7,7 +7,6 @@ import {
   cleanupProducer,
   createConsumerConfig,
   createProducerConfig,
-  createTestTopic,
   isTestMessage,
   setupTestEnvironment,
 } from './utils.mjs'
@@ -80,7 +79,7 @@ await test('Consumer Manual Commit Integration Tests', async (t) => {
       const assignment = consumer.assignment()
       console.log(`Consumer assigned to ${assignment.length} partitions`)
       ok(assignment.length > 0, 'Consumer should be assigned to at least one partition')
-    } catch (error) {
+    } catch {
       console.log('Assignment check failed, continuing with test')
     }
 
@@ -181,7 +180,7 @@ await test('Consumer Manual Commit Integration Tests', async (t) => {
       const assignment = consumer.assignment()
       console.log(`Consumer assigned to ${assignment.length} partitions`)
       ok(assignment.length > 0, 'Consumer should be assigned to at least one partition')
-    } catch (error) {
+    } catch {
       console.log('Assignment check failed, continuing with test')
     }
 
@@ -318,8 +317,7 @@ await test('Consumer Manual Commit Integration Tests', async (t) => {
         const committedOffset = lastCommittedOffsets.get(partitionKey)
 
         console.log(
-          `Consumer2 received message at offset ${message.offset} on partition ${message.partition} (committed offset: ${
-            committedOffset ?? 'none'
+          `Consumer2 received message at offset ${message.offset} on partition ${message.partition} (committed offset: ${committedOffset ?? 'none'
           })`,
         )
         remainingMessages.push(message)

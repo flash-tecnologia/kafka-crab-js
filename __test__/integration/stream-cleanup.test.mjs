@@ -1,7 +1,7 @@
 import { strict as assert } from 'node:assert'
 import { test } from 'node:test'
 import { KafkaClient } from '../../dist/index.js'
-import { cleanupConsumer, createConsumerConfig, createTestTopic, TEST_CONFIG } from './utils.mjs'
+import { createConsumerConfig, createTestTopic, TEST_CONFIG } from './utils.mjs'
 
 test('Stream Resource Cleanup Integration Tests', async (t) => {
   const client = new KafkaClient(TEST_CONFIG)
@@ -210,7 +210,6 @@ test('Stream Resource Cleanup Integration Tests', async (t) => {
 
     // Mock unsubscribe to throw error
     const rawConsumer = streamConsumer.rawConsumer()
-    const originalUnsubscribe = rawConsumer.unsubscribe
     rawConsumer.unsubscribe = function() {
       throw new Error('Unsubscribe failed')
     }

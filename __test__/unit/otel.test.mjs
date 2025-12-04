@@ -3,7 +3,7 @@ import { createRequire } from 'node:module'
 import { afterEach, beforeEach, describe, test } from 'node:test'
 
 // OpenTelemetry test infrastructure
-import { context, SpanKind, SpanStatusCode, trace } from '@opentelemetry/api'
+import { context, SpanStatusCode, trace } from '@opentelemetry/api'
 import { AsyncHooksContextManager } from '@opentelemetry/context-async-hooks'
 import { AlwaysOnSampler, InMemorySpanExporter, SimpleSpanProcessor } from '@opentelemetry/sdk-trace-base'
 import { NodeTracerProvider } from '@opentelemetry/sdk-trace-node'
@@ -256,11 +256,11 @@ describe('KafkaClient OTEL Unit Tests', () => {
       clientId: 'test-client',
       otel: {
         serviceName: 'hooks-test',
-        messageHook: (span, message) => {
+        messageHook: (span, _message) => {
           messageHookCalled = true
           span.setAttributes({ 'hook.type': 'message' })
         },
-        producerHook: (span, record) => {
+        producerHook: (span, _record) => {
           producerHookCalled = true
           span.setAttributes({ 'hook.type': 'producer' })
         },
@@ -702,7 +702,7 @@ describe('KafkaClient OTEL Unit Tests', () => {
 
   test('should handle configuration precedence correctly', () => {
     // Test that explicit config overrides defaults
-    const client = new KafkaClient({
+    const _client = new KafkaClient({
       brokers: 'localhost:9092',
       clientId: 'precedence-test',
       otel: {
@@ -734,7 +734,7 @@ describe('KafkaClient OTEL Unit Tests', () => {
       assert(message, 'Message hook should receive message')
     }
 
-    const producerHook = (span, record, metadata) => {
+    const producerHook = (span, record, _metadata) => {
       producerHookExecuted = true
       assert(span, 'Producer hook should receive span')
       assert(record, 'Producer hook should receive record')
@@ -822,7 +822,7 @@ describe('KafkaClient OTEL Unit Tests', () => {
     // Reset and create new client with different config
     resetKafkaInstrumentation()
 
-    const client2 = new KafkaClient({
+    const _client2 = new KafkaClient({
       brokers: 'localhost:9092',
       clientId: 'dynamic-test-2',
       otel: { serviceName: 'updated-service', captureMessagePayload: true },
@@ -899,7 +899,7 @@ describe('KafkaClient OTEL Unit Tests', () => {
     assert.equal(traceparentParts[3].length, 2, 'flags should be 2 hex characters')
 
     // Also test that producer instrumentation would inject headers
-    const producer = client.createProducer()
+    const _producer = client.createProducer()
 
     // Create a mock for the underlying Rust send to capture instrumented records
     let capturedRecords = null
@@ -922,7 +922,7 @@ describe('KafkaClient OTEL Unit Tests', () => {
     }
 
     // Execute within span context and make sure span is active
-    const result = await context.with(spanContext, async () => {
+    await context.with(spanContext, async () => {
       return await instrumentedSend([testRecord])
     })
 
