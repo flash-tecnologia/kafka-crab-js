@@ -99,17 +99,6 @@ export abstract class BaseKafkaStreamReadable extends Readable {
    * @private
    */
   _destroy(error: Error | null, callback: (error?: Error | null) => void): void {
-    // Signal end-of-stream to ensure 'end' listeners fire even when destroyed early
-    try {
-      this.push(null)
-    } catch {
-      // ignore if already ended
-    }
-    try {
-      this.emit('end')
-    } catch {
-      // ignore if already emitted
-    }
     // Always unsubscribe first to stop receiving messages
     try {
       this.kafkaConsumer.unsubscribe()
@@ -133,20 +122,6 @@ export abstract class BaseKafkaStreamReadable extends Readable {
           : disconnectError
         callback(combinedError)
       })
-  }
-
-  /**
-   * Called when the stream is finishing (no more data will be written)
-   * Ensures proper cleanup when stream ends normally
-   * @private
-   */
-  _final(callback: (error?: Error | null) => void): void {
-    // For readable streams, _final is called when we push(null)
-    // Ensure consumer is properly cleaned up
-    this.kafkaConsumer
-      .disconnect()
-      .then(() => callback())
-      .catch((error) => callback(error))
   }
 
   /**

@@ -61,7 +61,7 @@ This major version includes important breaking changes that improve API consiste
    - **After**: `consumer.subscribe([{ topic: 'my-topic', createTopic: true }])`
 
 2. **Stream Lifecycle Management**:
-   - Stream consumers now properly implement Node.js stream lifecycle methods (`_destroy()`, `_final()`)
+   - Stream consumers now properly implement Node.js stream lifecycle methods (`_destroy()`)
    - **Memory leak prevention**: Streams now automatically disconnect Kafka consumers during destruction
    - Better resource cleanup ensures no hanging connections or memory leaks
    - Error handling during stream destruction is improved with proper error propagation

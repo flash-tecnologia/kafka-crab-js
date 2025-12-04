@@ -28,14 +28,18 @@ test('Stream Resource Cleanup Integration Tests', async (t) => {
       return originalDisconnect.call(this)
     }
 
-    // Manually destroy the stream (simulates error or explicit destroy)
-    const destroyPromise = new Promise((resolve, reject) => {
-      streamConsumer.on('error', reject)
-      streamConsumer.on('close', resolve)
-
-      // Trigger destroy
-      streamConsumer.destroy(new Error('Test destroy'))
+    // Handle error event to prevent test failure
+    streamConsumer.on('error', () => {
+      // Expected error from destroy, ignore
     })
+
+    // Set up close listener BEFORE destroying
+    const destroyPromise = new Promise((resolve) => {
+      streamConsumer.once('close', resolve)
+    })
+
+    // Trigger destroy - when destroying with an error, the error event fires first, then close
+    streamConsumer.destroy(new Error('Test destroy'))
 
     // Wait for stream to be destroyed
     await destroyPromise
@@ -47,9 +51,9 @@ test('Stream Resource Cleanup Integration Tests', async (t) => {
     assert.ok(streamConsumer.destroyed, 'Stream should be marked as destroyed')
   })
 
-  await t.test('Stream _final() method cleanup on end', async () => {
+  await t.test('Stream cleanup on normal destroy (no error)', async () => {
     const topic = createTestTopic()
-    const consumerConfig = createConsumerConfig(`cleanup-final-${Date.now()}`)
+    const consumerConfig = createConsumerConfig(`cleanup-normal-${Date.now()}`)
 
     // Create stream consumer
     const streamConsumer = client.createStreamConsumer(consumerConfig)
@@ -66,22 +70,20 @@ test('Stream Resource Cleanup Integration Tests', async (t) => {
       return originalDisconnect.call(this)
     }
 
-    // End the stream normally (triggers _final)
-    const endPromise = new Promise((resolve) => {
-      streamConsumer.on('end', resolve)
+    // Set up close listener
+    const closePromise = new Promise((resolve) => {
+      streamConsumer.once('close', resolve)
     })
 
-    // For readable streams, we need to push null to signal end
-    streamConsumer.push(null)
+    // Destroy without error (normal cleanup)
+    streamConsumer.destroy()
 
-    // Wait for stream to end
-    await endPromise
+    // Wait for stream to close
+    await closePromise
 
-    // Give a moment for cleanup to complete
-    await new Promise(resolve => setTimeout(resolve, 100))
-
-    // Verify disconnect was called during final cleanup
-    assert.ok(disconnectCalled, 'Consumer disconnect should be called during stream end')
+    // Verify disconnect was called during cleanup
+    assert.ok(disconnectCalled, 'Consumer disconnect should be called during normal destroy')
+    assert.ok(streamConsumer.destroyed, 'Stream should be marked as destroyed')
   })
 
   await t.test('Stream cleanup handles disconnect errors gracefully', async () => {
@@ -102,15 +104,16 @@ test('Stream Resource Cleanup Integration Tests', async (t) => {
 
     // Track errors
     let destroyError = null
-    const destroyPromise = new Promise((resolve) => {
-      streamConsumer.on('error', (error) => {
-        destroyError = error
-      })
-      streamConsumer.on('close', resolve)
-
-      // Trigger destroy with original error
-      streamConsumer.destroy(new Error('Original error'))
+    streamConsumer.on('error', (error) => {
+      destroyError = error
     })
+
+    const destroyPromise = new Promise((resolve) => {
+      streamConsumer.once('close', resolve)
+    })
+
+    // Trigger destroy with original error
+    streamConsumer.destroy(new Error('Original error'))
 
     // Wait for stream to be destroyed
     await destroyPromise
@@ -137,12 +140,13 @@ test('Stream Resource Cleanup Integration Tests', async (t) => {
     }
 
     // Destroy all streams
-    const cleanupPromises = streams.map(stream =>
-      new Promise((resolve) => {
-        stream.on('close', resolve)
-        stream.destroy()
+    const cleanupPromises = streams.map(stream => {
+      const promise = new Promise((resolve) => {
+        stream.once('close', resolve)
       })
-    )
+      stream.destroy()
+      return promise
+    })
 
     // Wait for all streams to be cleaned up
     await Promise.all(cleanupPromises)
@@ -181,9 +185,10 @@ test('Stream Resource Cleanup Integration Tests', async (t) => {
 
     // Destroy the batch stream
     const destroyPromise = new Promise((resolve) => {
-      batchStreamConsumer.on('close', resolve)
-      batchStreamConsumer.destroy()
+      batchStreamConsumer.once('close', resolve)
     })
+
+    batchStreamConsumer.destroy()
 
     // Wait for stream to be destroyed
     await destroyPromise
@@ -219,9 +224,10 @@ test('Stream Resource Cleanup Integration Tests', async (t) => {
 
     // Destroy the stream
     const destroyPromise = new Promise((resolve) => {
-      streamConsumer.on('close', resolve)
-      streamConsumer.destroy()
+      streamConsumer.once('close', resolve)
     })
+
+    streamConsumer.destroy()
 
     // Wait for stream to be destroyed
     await destroyPromise
